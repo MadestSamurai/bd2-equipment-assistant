@@ -10,7 +10,7 @@ A standalone equipment assistant for BrownDust II on Windows. Plan N-grade gear 
 
 ## Download
 
-Current version: **0.2.0-beta.1**. One application includes Simplified Chinese and English. Start with a small budget when evaluating this beta.
+Current version: **0.2.0**. One application includes Simplified Chinese and English. Start with a small budget when first using the tool.
 
 | Edition | Runtime requirement | Recommended for |
 | --- | --- | --- |
@@ -73,7 +73,7 @@ Requires Windows, PowerShell and .NET SDK 10.0.100. From this repository root:
 .\package.ps1 -Locked
 ```
 
-Packages go to `dist/v0.2.0-beta.1/`. The public source builds independently, without other BD2 repositories or Python.
+Packages go to `dist/v0.2.0/`. The public source builds independently, without other BD2 repositories or Python.
 
 [Development](docs/DEVELOPMENT.md) · [Localization](docs/LOCALIZATION.md) · [Publication style](docs/PUBLICATION_STYLE.md) · [Release notes](docs/RELEASE_NOTES.md)
 

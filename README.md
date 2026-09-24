@@ -10,7 +10,7 @@
 
 ## 下载
 
-当前版本：**0.2.0-beta.1**。同一个程序内置简体中文与英语；首次使用建议先以小预算确认游戏结果。
+当前版本：**0.2.0**。同一个程序内置简体中文与英语；首次使用建议先以小预算确认游戏结果。
 
 | 版本 | 运行环境 | 建议 |
 | --- | --- | --- |
@@ -73,7 +73,7 @@
 .\package.ps1 -Locked
 ```
 
-输出目录为 `dist/v0.2.0-beta.1/`。公开源码可独立构建，不依赖其他 BD2 仓库或 Python。
+输出目录为 `dist/v0.2.0/`。公开源码可独立构建，不依赖其他 BD2 仓库或 Python。
 
 [开发说明](docs/DEVELOPMENT.md) · [翻译维护](docs/LOCALIZATION.md) · [发布格式](docs/PUBLICATION_STYLE.md) · [更新说明](docs/RELEASE_NOTES.md)
 

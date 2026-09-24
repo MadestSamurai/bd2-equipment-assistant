@@ -1,9 +1,10 @@
-# BD2 Equipment Assistant v0.2.0-beta.1
+# BD2 Equipment Assistant v0.2.0
 
 ## 简体中文
 
 ### 更新内容
 
+- 发布 0.2.0 正式版，统一程序版本、下载文件及文档标识。
 - 搓粉与批量精炼独立开源，提供内置简体中文／英语切换与两份 README。
 - 单个 EXE 包含计算和连接组件，无需 Python、私有工作台或日常助手。
 - 按现有资源规划 N 装强化后分解，执行前展示消耗并要求确认；5 药配方可选。
@@ -21,12 +22,13 @@
 
 ### 升级
 
-先停止并关闭旧工具。若本次游戏会话已经连接过其他助手或私有工作台，正常重启游戏后再连接。旧计划和核账记录保留；重新读取库存、计算并确认后执行。Beta 版首次建议小预算试用；游戏更新导致版本校验不符时，请等待工具适配。
+先停止并关闭旧工具。若本次游戏会话已经连接过其他助手或私有工作台，正常重启游戏后再连接。旧计划和核账记录保留；重新读取库存、计算并确认后执行。首次建议小预算试用；游戏更新导致版本校验不符时，请等待工具适配。
 
 ## English
 
 ### Changes
 
+- Stable 0.2.0 release, with consistent application, download and documentation version labels.
 - First independent open-source release for powder crafting and batch refinement, with built-in Chinese/English switching and separate READMEs.
 - A single EXE includes the planner and connection component. No Python, private workbench or daily assistant required.
 - Plans N-grade enhancement and dismantling using existing resources, with a cost preview and explicit confirmation. Optional 5-pill recipes.
@@ -44,4 +46,4 @@ Both editions include Chinese and English. EXEs work alone; ZIP files also inclu
 
 ### Upgrade
 
-Stop and close the old tool. If another assistant or the private workbench has connected during this game session, restart the game normally before connecting. Existing plans and journals are preserved; read inventory, calculate and confirm again. Start with a small budget for this beta. If a game update fails compatibility validation, wait for a matching tool update.
+Stop and close the old tool. If another assistant or the private workbench has connected during this game session, restart the game normally before connecting. Existing plans and journals are preserved; read inventory, calculate and confirm again. Start with a small budget on first use. If a game update fails compatibility validation, wait for a matching tool update.
