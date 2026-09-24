@@ -1,6 +1,10 @@
 using BD2Equipment.Compatibility;
 using Mono.Cecil;
 using System.Text.Json;
+if(args[0]=="read-only-capture"){
+ using var game=new BD2Equipment.Core.LiveEquipment(true);var captured=game.Capture();
+ Console.WriteLine(JsonSerializer.Serialize(new{status="passed",equipment=captured["gear"]!.AsArray().Count,recipes=BD2Equipment.Core.EquipmentPlanner.Catalog["recipes"]!.AsArray().Count,resourcesSpent=false}));return;
+}
 if(args[0]=="catalog"){
  var tables=new System.Text.Json.Nodes.JsonObject();foreach(var dir in args.Skip(1))foreach(var file in Directory.GetFiles(dir,"*Table.json"))tables[Path.GetFileNameWithoutExtension(file)]=System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(file));
  var built=BD2Equipment.Core.CurrentCatalog.Build(tables,"offline-current-tables");
@@ -8,7 +12,7 @@ if(args[0]=="catalog"){
  BD2Equipment.Core.J.Write(Path.Combine(args[1],"derived-display.json"),built.Display);
  Console.WriteLine($"Current tables: {built.Catalog["equipment"]!.AsObject().Count} equipment; {built.Catalog["recipes"]!.AsArray().Count} normal recipes");return;
 }
-if(args[0]=="prepare"||args[0]=="taps"){await BD2Equipment.Live.LiveEntry.RunAsync(args);return;}
+if(args[0] is "prepare" or "taps" or "attach" or "upgrade" or "locate" or "self-test"){await BD2Equipment.Live.LiveEntry.RunAsync(args);return;}
 using var index=new MetadataIndex(args[1]);
 if(args[0]=="inspect"){
  foreach(var t in index.Types.Where(t=>t.FullName==args[2]||t.Name==args[2])){

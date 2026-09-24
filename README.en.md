@@ -10,7 +10,7 @@ A standalone equipment assistant for BrownDust II on Windows. Plan N-grade gear 
 
 ## Download
 
-Current version: **0.3.0**. One application includes Simplified Chinese and English. Start with a small budget when first using the tool.
+Current version: **0.3.1**. One application includes Simplified Chinese and English. Start with a small budget when first using the tool.
 
 | Edition | Runtime requirement | Recommended for |
 | --- | --- | --- |
@@ -27,7 +27,7 @@ Windows x64 only. Both editions have the same features. Each EXE works on its ow
 4. Review gold, materials, Ability Pills, expected powder or refinement budget, confirm in the review dialog, then execute.
 5. **Stop** prevents further batches. An already-submitted game batch finishes and is reconciled first; consumed resources cannot be undone.
 
-When upgrading from 0.2.0 or earlier, stop and close the old tool. If another assistant or the private workbench has connected to this game session, restart the game normally before connecting the public edition. Existing plans and journals are preserved; read inventory, calculate and confirm again before executing a new plan.
+When upgrading from 0.3.0 or earlier, stop and close the old tool. If the old equipment assistant connected to this game session, restart the game normally once before connecting the new version. Existing plans and journals are preserved; read inventory, calculate and confirm again before executing a new plan.
 
 ## Features and settings
 
@@ -75,7 +75,7 @@ Requires Windows, PowerShell and .NET SDK 10.0.100. From this repository root:
 .\package.ps1 -Locked
 ```
 
-Packages go to `dist/v0.3.0/`. The public source builds independently, without other BD2 repositories or Python.
+Packages go to `dist/v0.3.1/`. The public source builds independently, without other BD2 repositories or Python.
 
 [Development](docs/DEVELOPMENT.md) · [Localization](docs/LOCALIZATION.md) · [Publication style](docs/PUBLICATION_STYLE.md) · [Release notes](docs/RELEASE_NOTES.md)
 

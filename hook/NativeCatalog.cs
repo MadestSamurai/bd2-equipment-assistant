@@ -12,7 +12,7 @@ namespace BD2Equipment.Live {
  internal static class NativeCatalog {
   [DataContract] sealed class Request { [DataMember] public string Id; [DataMember] public long ExpiresUtcTicks; }
   static readonly string[] Tables={"EquipmentTable","EquipmentMakingTable","EquipmentGrowthTable","EquipmentGradeTable","EquipmentExpectTable","EquipmentRankTable","EquipmentOptionTable","RandomBoxTable","RewardGroupTable","TalentSkillTable","ResourceTable","CharTable","NameTextTable","LocalTextTable"};
-  static readonly MethodInfo ReadTable=typeof(RawDataManager).GetMethods(BindingFlags.Public|BindingFlags.Static|BindingFlags.Instance).Single(m=>m.Name=="GetTableList"&&m.IsGenericMethodDefinition&&m.GetGenericArguments().Length==1&&m.GetParameters().Length==1&&m.GetParameters()[0].ParameterType==typeof(string));
+  static readonly MethodInfo ReadTable=NativeTableReader.Resolve(typeof(RawDataManager));
   static object Manager(){
    if(ReadTable.IsStatic)return null;
    var properties=new List<PropertyInfo>();for(var t=typeof(RawDataManager);t!=null;t=t.BaseType)properties.AddRange(t.GetProperties(BindingFlags.Public|BindingFlags.NonPublic|BindingFlags.Static|BindingFlags.DeclaredOnly).Where(p=>p.PropertyType==typeof(RawDataManager)&&p.GetIndexParameters().Length==0&&p.GetGetMethod(true)!=null));
@@ -21,7 +21,7 @@ namespace BD2Equipment.Live {
   static readonly Dictionary<string,string> rows=new Dictionary<string,string>();
   static string active="",completed="",actor="";static int next;
   internal static IEnumerable<T> Table<T>(string name){
-   return ((IEnumerable)ReadTable.MakeGenericMethod(typeof(T)).Invoke(Manager(),new object[]{name})).Cast<T>();
+   return ((IEnumerable)ReadTable.MakeGenericMethod(typeof(T)).Invoke(Manager(),NativeTableReader.Arguments(ReadTable,name))).Cast<T>();
   }
   internal static bool IsNormalRecipe(int id){
    var recipe=Table<Proto.Design.common.EquipmentMakingTable>("EquipmentMakingTable").Single(r=>r.Id==id);
@@ -44,7 +44,7 @@ namespace BD2Equipment.Live {
    try {
     if(identity!=actor)throw new InvalidOperationException("Account changed during catalog capture");
     var name=Tables[next];var type=typeof(UIBase).Assembly.GetType("Proto.Design.common."+name,true);
-    var table=((IEnumerable)ReadTable.MakeGenericMethod(type).Invoke(Manager(),new object[]{name})).Cast<IMessage>().ToArray();
+    var table=((IEnumerable)ReadTable.MakeGenericMethod(type).Invoke(Manager(),NativeTableReader.Arguments(ReadTable,name))).Cast<IMessage>().ToArray();
     if(table.Length==0)throw new InvalidOperationException("Native table unavailable: "+name);
     rows[name]="["+string.Join(",",table.Select(m=>JsonFormatter.Default.Format(m)).ToArray())+"]";
     next++;if(next<Tables.Length)return; // One table per observation tick, only on explicit refresh.

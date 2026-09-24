@@ -1,13 +1,12 @@
-# BD2 Equipment Assistant v0.3.0
+# BD2 Equipment Assistant v0.3.1
 
 ## 简体中文
 
 ### 更新内容
 
-- 接入与钓鱼工具同源的跨版本接口适配，不再锁定发布时的游戏 DLL／数据包。
-- 读取当前游戏的装备、制作和精炼费用，新增装备及中英文名称随游戏数据更新。
-- 执行前重新读取费用；发生变化时要求重新计算并确认。保留原生价格、回执和库存核账。
-- 明确提示无法识别的接口变化，避免新旧连接组件同时运行。
+- 修复 0.3.0 连接后读取库存失败，提示 `Native table unavailable: EquipmentTable` 的问题。
+- 修正当前游戏数据表的读取入口；装备、制作配方及精炼费用继续从本机游戏读取。
+- 保留中英切换、跨版本接口适配、批量制作与精炼功能。
 
 ### 下载
 
@@ -20,16 +19,15 @@
 
 ### 升级
 
-停止并关闭旧工具。如果它已连接当前游戏，请正常重启游戏一次，再打开新版读取库存、计算并确认。旧计划和核账记录保留。跨版本适配不等于保证所有未来版本，无法确认的接口会明确停止。
+停止并关闭旧工具。如果旧装备助手已连接当前游戏，请正常重启游戏一次，再打开新版读取库存、计算并确认。原有计划和核账记录保留。
 
 ## English
 
 ### Changes
 
-- Adds the fishing tool's structural cross-version binding approach, removing release-time game DLL/data-package locks.
-- Reads current equipment, crafting and refinement costs from the game, including new equipment and Chinese/English names.
-- Refreshes costs before execution and requires a new confirmed plan if they changed. Native quotes, receipts and inventory reconciliation remain in place.
-- Reports unsupported interface changes and prevents overlapping old/new equipment components.
+- Fixes inventory capture failing after connection in v0.3.0 with `Native table unavailable: EquipmentTable`.
+- Corrects the game's table-reading API selection. Equipment, crafting recipes and refinement costs still come from the installed game.
+- Retains Chinese/English language switching, cross-version interface binding, batch crafting and batch refinement.
 
 ### Downloads
 
@@ -42,4 +40,4 @@ Both editions include Chinese and English. Each EXE works independently; ZIPs al
 
 ### Upgrade
 
-Stop and close the old tool. If it connected to the current game session, restart the game normally once, then read inventory and calculate/confirm again in the new version. Plans and journals are preserved. Cross-version adaptation is not a guarantee for every future release; unverified interfaces stop with diagnostics.
+Stop and close the old tool. If the old equipment assistant connected to the current game session, restart the game normally once, then read inventory and calculate/confirm again in the new version. Existing plans and journals are preserved.

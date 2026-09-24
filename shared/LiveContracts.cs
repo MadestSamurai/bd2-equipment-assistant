@@ -4,7 +4,7 @@ using System.Linq;
 using System.Runtime.Serialization;
 namespace BD2Equipment.Live {
  public static class LiveProtocol {
-  public const int BridgeVersion=62;
+  public const int BridgeVersion=63;
   public static bool Ready(Frame f,int processId,long startTicks,long now,string previousInstance=null){
    return f!=null&&f.Protocol==1&&f.BridgeVersion==BridgeVersion&&f.ProcessId==processId&&f.ProcessStartTicks==startTicks&&f.AtUtcTicks>now-TimeSpan.FromSeconds(3).Ticks&&f.AtUtcTicks<=now+TimeSpan.FromSeconds(2).Ticks&&!string.IsNullOrEmpty(f.Instance)&&string.IsNullOrEmpty(f.Error)&&(previousInstance==null||f.Instance!=previousInstance);
   }

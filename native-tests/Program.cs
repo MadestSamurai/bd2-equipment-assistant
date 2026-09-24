@@ -25,7 +25,7 @@ foreach(var line in (regression?cases!.Select(c=>c!["job"]!.ToJsonString()):File
   Record(new JsonObject{["result"]=result});
  }catch(Exception ex){Record(new JsonObject{["error"]=ex.Message,["type"]=ex.GetType().Name});}
 }
-if(regression){CatalogChecks.Run();CompatibilityChecks.Run();Console.WriteLine(new JsonObject{["checks"]=testIndex,["status"]=failures.Count==0?"passed":"failed",["failures"]=new JsonArray(failures.Select(x=>(JsonNode?)JsonValue.Create(x)).ToArray())}.ToJsonString());if(failures.Count>0)Environment.ExitCode=1;}
+if(regression){CatalogChecks.Run();CompatibilityChecks.Run();TableReaderChecks.Run();Console.WriteLine(new JsonObject{["checks"]=testIndex,["status"]=failures.Count==0?"passed":"failed",["failures"]=new JsonArray(failures.Select(x=>(JsonNode?)JsonValue.Create(x)).ToArray())}.ToJsonString());if(failures.Count>0)Environment.ExitCode=1;}
 sealed class FakeGame(JsonObject initial,JsonArray results,bool stop):IEquipmentGame{
  JsonObject current=Copy(initial);int index;public readonly JsonArray Actions=new();public string Destination="";
  public JsonObject Stock()=>Copy(current);public void RefinePreview(string instance){}public int PowderPreview(JsonNode recipe,int count,int level)=>throw new NotImplementedException();public void Cleanup(string destination)=>Destination=destination;public IDisposable EnableActions()=>this;public void Dispose(){}

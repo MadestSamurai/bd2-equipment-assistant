@@ -25,7 +25,7 @@ public sealed class LiveEquipment:IEquipmentGame
   Directory.CreateDirectory(Data);var location=JsonNode.Parse(invoke(["locate"]))!;string managed=S(location["managed"]);
   JsonObject? frame=null;try{frame=Snapshot();if(!Equal(frame["ProcessId"],location["processId"])||!Equal(frame["ProcessStartTicks"],location["startTicks"]))frame=null;}catch(IOException){}catch(InvalidOperationException){}
   string prepared=Path.Combine(Data,"prepared");Directory.CreateDirectory(prepared);
-  if(frame==null||N(frame["BridgeVersion"])!=62){invoke(["prepare",managed,prepared]);invoke([frame==null?"attach":"upgrade",Path.Combine(prepared,"bridge.dll")]);}
+  if(frame==null||N(frame["BridgeVersion"])!=63){invoke(["prepare",managed,prepared]);invoke([frame==null?"attach":"upgrade",Path.Combine(prepared,"bridge.dll")]);}
   string spec=Path.Combine(prepared,"evidence-spec.json");Write(spec,Resource("evidence-spec.json"));invoke(["taps",managed,spec,Path.Combine(Data,"evidence-config.json")]);Snapshot();
  }
  public LiveEquipment(bool details=false){
