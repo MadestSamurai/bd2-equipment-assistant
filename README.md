@@ -66,7 +66,7 @@
 
 ## 开发与贡献
 
-需要 Windows、PowerShell 和 .NET 8 SDK。在仓库根目录运行：
+需要 Windows、PowerShell 和 .NET SDK 10.0.100。在仓库根目录运行：
 
 ```powershell
 .\build.ps1 -Locked

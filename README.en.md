@@ -66,7 +66,7 @@ Report the version, full error text, steps and relevant diagnostic excerpts. Nev
 
 ## Development and contributions
 
-Requires Windows, PowerShell and .NET 8 SDK. From this repository root:
+Requires Windows, PowerShell and .NET SDK 10.0.100. From this repository root:
 
 ```powershell
 .\build.ps1 -Locked

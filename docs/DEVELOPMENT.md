@@ -1,6 +1,6 @@
 # Development / 开发说明
 
-Windows + .NET 8 SDK + PowerShell. No private repository, Python or game installation is required to build or package.
+Windows + .NET SDK 10.0.100 + PowerShell. No private repository, Python or game installation is required to build or package.
 
 ```powershell
 .\build.ps1 -Locked
@@ -30,6 +30,8 @@ Smoke checks exercise packaged UI and the in-process C# engine without connectin
 ```
 
 Compilation and synthetic tests do not prove a live server transaction. For a new client or connection adapter, validate a small, explicitly approved craft/refine batch and reconcile inventory before claiming runtime verification. Never clear an unresolved journal to obtain a passing run.
+
+The build SDK is pinned separately from the application runtime: SDK 10.0.100 builds the .NET 8 application. This prevents SDK updates from silently changing the implicit ILLink package and invalidating locked restore. Lite still needs .NET Desktop Runtime 8 x64.
 
 ## Compatibility updates / 客户端更新
 
