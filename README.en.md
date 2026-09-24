@@ -10,7 +10,7 @@ A standalone equipment assistant for BrownDust II on Windows. Plan N-grade gear 
 
 ## Download
 
-Current version: **0.2.0**. One application includes Simplified Chinese and English. Start with a small budget when first using the tool.
+Current version: **0.3.0**. One application includes Simplified Chinese and English. Start with a small budget when first using the tool.
 
 | Edition | Runtime requirement | Recommended for |
 | --- | --- | --- |
@@ -27,7 +27,7 @@ Windows x64 only. Both editions have the same features. Each EXE works on its ow
 4. Review gold, materials, Ability Pills, expected powder or refinement budget, confirm in the review dialog, then execute.
 5. **Stop** prevents further batches. An already-submitted game batch finishes and is reconciled first; consumed resources cannot be undone.
 
-When upgrading from private version 0.1.6, stop and close the old tool. If another assistant or the private workbench has connected to this game session, restart the game normally before connecting the public edition. Existing plans and journals are preserved; read inventory, calculate and confirm again before executing a new plan.
+When upgrading from 0.2.0 or earlier, stop and close the old tool. If another assistant or the private workbench has connected to this game session, restart the game normally before connecting the public edition. Existing plans and journals are preserved; read inventory, calculate and confirm again before executing a new plan.
 
 ## Features and settings
 
@@ -54,7 +54,9 @@ First launch follows the system language. Use the top-right switch for Simplifie
 
 ## Compatibility and limits
 
-Requires the official Windows client, not an Android emulator. The connection component is compiled locally, but resource costs and fields must match the client: **a game program or data update that fails validation requires a tool update**. The tool will not continue with outdated prices.
+Requires the official Windows client, not an Android emulator. At connection time, the tool resolves local interfaces by structure, method-body fingerprints and call sites, then compiles the adapter. It does not pin the game DLL or data package shipped with a release. Inventory refresh and execution read the currently loaded equipment, recipe and cost tables. New equipment, price changes and resolvable symbol renaming do not require a new tool release.
+
+This does not guarantee every future version. Changed batch APIs, unsupported cost structures or ambiguous bindings stop with diagnostics instead of guessing or using stale prices. Older clients without the required native batch features are also rejected. See [cross-version adaptation](docs/COMPATIBILITY.md).
 
 The repository includes static equipment names, stats and crafting/refinement cost metadata. It does not include game DLLs, images, account inventories, private captures or automation for other modes. Building requires no game installation; connecting does.
 
@@ -73,7 +75,7 @@ Requires Windows, PowerShell and .NET SDK 10.0.100. From this repository root:
 .\package.ps1 -Locked
 ```
 
-Packages go to `dist/v0.2.0/`. The public source builds independently, without other BD2 repositories or Python.
+Packages go to `dist/v0.3.0/`. The public source builds independently, without other BD2 repositories or Python.
 
 [Development](docs/DEVELOPMENT.md) · [Localization](docs/LOCALIZATION.md) · [Publication style](docs/PUBLICATION_STYLE.md) · [Release notes](docs/RELEASE_NOTES.md)
 

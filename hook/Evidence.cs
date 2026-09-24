@@ -78,6 +78,7 @@ namespace BD2Equipment.Live {
    using(var ms=new MemoryStream()){(Bridge.LegacyObservation?new DataContractJsonSerializer(value.GetType()):Serializer(value.GetType())).WriteObject(ms,value);return Encoding.UTF8.GetString(ms.ToArray());}
   }
   private static object Member(object instance,Type type,string name,bool isStatic=false){
+   name=ClientNames.Map(name);
    var flags=BindingFlags.Public|BindingFlags.NonPublic|(isStatic?BindingFlags.Static:BindingFlags.Instance);
    if(name.EndsWith("()",StringComparison.Ordinal)){
     bool clock=name=="UnixTimeStamp()"&&type.FullName=="gamfs.Thread.TimerManager";
@@ -145,6 +146,7 @@ namespace BD2Equipment.Live {
   internal static void Tick(Frame current){
    frame=current;
    try{
+    NativeCatalog.Tick(root,current);
     var path=Path.Combine(root,"evidence-config.json");if(File.Exists(path)){string text;using(var f=new FileStream(path,FileMode.Open,FileAccess.Read,FileShare.Read|FileShare.Delete))using(var reader=new StreamReader(f))text=reader.ReadToEnd();if(text!=last)Configure(text);}
     var state=new EvidenceState{AtUtcTicks=DateTime.UtcNow.Ticks,Frame=current,Config=Convert.ToBase64String(System.Security.Cryptography.SHA256.Create().ComputeHash(Encoding.UTF8.GetBytes(last)))};
     var request=Request();state.ObservationRequest=request==null?"":request.Id;var costs=new List<string>();
@@ -153,7 +155,7 @@ namespace BD2Equipment.Live {
      foreach(var r in LivePolicy.GameplayReady(current)?config.Reads:new ReadRule[0]){
       if(!Bridge.LegacyObservation&&(request==null||request.ExpiresUtcTicks<DateTime.UtcNow.Ticks||!request.Prefixes.Any(prefix=>prefix=="*"||r.Id==prefix||r.Id.StartsWith(prefix+".",StringComparison.Ordinal))))continue;
       var timer=Stopwatch.StartNew();
-      try{var type=typeof(UIBase).Assembly.GetType(r.Type,true);
+      try{var type=typeof(UIBase).Assembly.GetType(ClientNames.Map(r.Type),true);
        if(!string.IsNullOrEmpty(r.StaticMember)){var value=Member(null,type,r.StaticMember,true);readings.Add(new Reading{Id=r.Id,Values=ReadValues(value,r)});}
        else foreach(var value in (Bridge.LegacyObservation?UnityEngine.Object.FindObjectsOfType(type):Bridge.Find(type))){var component=value as UnityEngine.Component;if(component!=null&&component.gameObject.activeInHierarchy)readings.Add(new Reading{Id=r.Id,InstanceId=component.GetInstanceID(),Values=ReadValues(value,r)});}
       }catch(Exception e){readings.Add(new Reading{Id=r.Id,Error=e.GetBaseException().Message});}

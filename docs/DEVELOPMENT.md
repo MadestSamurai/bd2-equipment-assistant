@@ -13,6 +13,7 @@ Windows + .NET SDK 10.0.100 + PowerShell. No private repository, Python or game 
 | --- | --- |
 | `desktop/` | WPF, confirmation and instance selection; no external web server |
 | `core/` | Resource planning, HiGHS optimization, exact budgets and transaction reconciliation |
+| `compatibility/`, `compatibility-cli/` | Structural bindings and maintainer-only contract generation |
 | `connection/` | Client discovery, Mono injection, local adapter compilation and member bindings |
 | `hook/`, `shared/` | Equipment-only observation, UI actions, native craft/refine commands and policy gates |
 | `localization/` | UI strings and static display aliases |
@@ -35,7 +36,11 @@ The build SDK is pinned separately from the application runtime: SDK 10.0.100 bu
 
 ## Compatibility updates / 客户端更新
 
-`catalog.json` records exact client assembly and database hashes. `display-catalog.json` contains names/stat descriptions; `evidence-spec.json`, `ui-policy.json` and equipment-native methods define the consumed interfaces. Update them together only after rechecking costs, native batch stopping behavior, receipt ordering and resource deltas. Do not disable fingerprint checks merely to support an update.
+`compatibility/` reuses the structural resolver from bd2-fishing. Its contract contains interface shapes and one-way method/call-site fingerprints, never game IL. `compatibility-cli/` regenerates the contract only when a maintainer deliberately reviews an interface change; released builds resolve it locally.
+
+`NativeCatalog` reads current game tables on demand, one table per observation tick. `CurrentCatalog` validates them and derives recipe costs, refinement costs, equipment and bilingual names. The embedded `catalog.json` and `display-catalog.json` remain offline test fixtures; production operations require a catalog bound to the current process and account. Execution refreshes the tables before validating the confirmed plan.
+
+`evidence-spec.json`, `ui-policy.json` and native commands define consumed interfaces. Structural ambiguity, price/receipt mismatches and changed batch semantics still stop execution. Client MVID checks bind locally compiled code to the running client; they are not release-version locks.
 
 The adapter binds only the equipment workflow, with isolated local files. No private daily controller, account switcher, collected replay or game DLL is published. Use one automation controller per game session. Attachment does not perform gameplay actions.
 

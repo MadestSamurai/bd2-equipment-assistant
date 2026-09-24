@@ -33,7 +33,7 @@ namespace BD2Equipment.Live {
    if(c.Kind=="powder_recipe"){
     var menu=(EquipmentMakingSelectUI)ui;
     var r=menu.EquipmentMakingDatas.Single(x=>x.ὫὮὩὬὤὫὮὨὢὯὬ.Id==c.Value);
-    Require(c.Value>=1&&c.Value<=10,"Only current N recipes are supported");
+    Require(NativeCatalog.IsNormalRecipe(c.Value),"Only current N recipes are supported");
     menu.OnEquipmentMakingUI(r);return;
    }
    var popup=(EquipmentUpgradePopupUI)ui;

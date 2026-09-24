@@ -18,6 +18,7 @@ static class TapManifest {
   using var resolver=new DefaultAssemblyResolver();resolver.AddSearchDirectory(managed);
   using var module=ModuleDefinition.ReadModule(Path.Combine(managed,"Assembly-CSharp.dll"),new ReaderParameters{AssemblyResolver=resolver});
   var types=All(module.Types).ToArray();var methods=types.Where(t=>!t.FullName.StartsWith("Proto.")).SelectMany(t=>t.Methods).Where(m=>m.HasBody).ToArray();
+  using var adapter=new BD2Equipment.Compatibility.ClientAdapter(managed);
   var spec=LoadSpec(specPath);var taps=new JsonArray();
   foreach(var rule in spec["Taps"]!.AsArray()){
    string dto=rule!["ResponseType"]!.GetValue<string>(),request=dto.Replace("Response","Request");
@@ -31,7 +32,7 @@ static class TapManifest {
     var helpers=methods.Where(m=>Refers(m,dto)).Select(m=>m.FullName).ToHashSet();
     resp=resp.Concat(methods.Where(m=>m.ReturnType.FullName=="System.Boolean"&&m.Parameters.Select(p=>p.ParameterType.FullName).SequenceEqual(new[]{"System.Byte[]","System.Int32","System.Int32"})&&m.Body.Instructions.Any(i=>i.Operand is MethodReference mr&&helpers.Contains(mr.FullName)))).Distinct().ToArray();
    }
-   if(rule["ResponseOwner"] is {} owner)resp=resp.Where(m=>m.DeclaringType.FullName==owner.GetValue<string>() || (rule["ResponseOwnerIncludesNested"]?.GetValue<bool>()==true && m.DeclaringType.FullName.StartsWith(owner.GetValue<string>()+"/",StringComparison.Ordinal))).ToArray();
+   if(rule["ResponseOwner"] is {} owner)resp=resp.Where(m=>m.DeclaringType.FullName==adapter.Name(owner.GetValue<string>()) || (rule["ResponseOwnerIncludesNested"]?.GetValue<bool>()==true && m.DeclaringType.FullName.StartsWith(adapter.Name(owner.GetValue<string>())+"/",StringComparison.Ordinal))).ToArray();
    if(rule["RequestMethod"] is {} requestMethod)req=req.Where(m=>m.Name==requestMethod.GetValue<string>()).ToArray();
    if(rule["ResponseMethod"] is {} responseMethod)resp=resp.Where(m=>m.Name==responseMethod.GetValue<string>()).ToArray();
    var responseNames=rule["ResponseMethods"]?.AsArray().Select(x=>x!.GetValue<string>()).ToArray();
@@ -46,6 +47,7 @@ static class TapManifest {
    if(value is ArrayType arr)return new ArrayType(Bind(arr.ElementType,owner));return value;
   }
   TypeReference Member(TypeReference source,string name){
+   name=adapter.Name(name);
    for(TypeReference? cur=source;cur!=null;){
     var type=cur.Resolve();TypeReference? found=null;
     if(name.EndsWith("()",StringComparison.Ordinal)){var method=type.Methods.SingleOrDefault(m=>m.Name==name[..^2]&&m.Parameters.Count==0);found=method?.ReturnType;}
@@ -64,7 +66,7 @@ static class TapManifest {
   var readErrors=new List<string>();int readCount=0;
   foreach(var rule in spec["Reads"]!.AsArray()){
    try{
-    TypeReference start=types.Single(t=>t.FullName==rule["Type"]!.GetValue<string>());
+    TypeReference start=types.Single(t=>t.FullName==adapter.Name(rule["Type"]!.GetValue<string>()));
     if(rule["StaticMember"] is {} member)start=Member(start,member.GetValue<string>());
     foreach(var path in rule["Paths"]!.AsArray())PathType(start,path!.GetValue<string>());
     if(rule["CollectionPath"] is {} collection){var item=ItemType(PathType(start,collection.GetValue<string>()))??throw new Exception("Collection is not enumerable");foreach(var path in rule["ItemPaths"]!.AsArray())PathType(item,path!.GetValue<string>());}

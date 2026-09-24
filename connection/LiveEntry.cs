@@ -16,11 +16,11 @@ public static class LiveEntry {
  static Process Game(){var games=Process.GetProcessesByName("BrownDust II");if(games.Length!=1){foreach(var p in games)p.Dispose();throw new InvalidOperationException("Open exactly one game instance and enter the home screen.");}return games[0];}
  static byte[] Resource(string name){using var s=typeof(LiveEntry).Assembly.GetManifestResourceStream(name)??throw new InvalidDataException("Missing embedded component: "+name);using var b=new MemoryStream();s.CopyTo(b);return b.ToArray();}
  public static void Prepare(string managed,string output){
-  Directory.CreateDirectory(output);var assembly=typeof(LiveEntry).Assembly;
-  var sources=assembly.GetManifestResourceNames().Where(n=>n.StartsWith("Live.")&&n.EndsWith(".cs")).OrderBy(n=>n,StringComparer.Ordinal).Select(n=>CSharpSyntaxTree.ParseText(Encoding.UTF8.GetString(Resource(n)),path:n));
+  Directory.CreateDirectory(output);var assembly=typeof(LiveEntry).Assembly; using var adapter=new BD2Equipment.Compatibility.ClientAdapter(managed); LiveJson.Write(Path.Combine(output,"compatibility.json"),adapter.Bindings.Report);
+  var sources=assembly.GetManifestResourceNames().Where(n=>n.StartsWith("Live.")&&n.EndsWith(".cs")).OrderBy(n=>n,StringComparer.Ordinal).Select(n=>CSharpSyntaxTree.ParseText(adapter.Rewrite(Encoding.UTF8.GetString(Resource(n))),path:n)).Append(CSharpSyntaxTree.ParseText(adapter.Source(),path:"ClientNames.cs"));
   var refs=new List<MetadataReference>();foreach(var file in Directory.EnumerateFiles(managed,"*.dll"))try{refs.Add(MetadataReference.CreateFromFile(file));}catch(BadImageFormatException){}
   byte[] harmony=Resource("Equipment.Harmony.dll");refs.Add(MetadataReference.CreateFromImage(harmony));
-  var comp=CSharpCompilation.Create("BD2Equipment.LiveBridge61",sources,refs,new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary,optimizationLevel:OptimizationLevel.Release,platform:Platform.X64,deterministic:true));
+  var comp=CSharpCompilation.Create("BD2Equipment.LiveBridge62",sources,refs,new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary,optimizationLevel:OptimizationLevel.Release,platform:Platform.X64,deterministic:true));
   using var bytes=new MemoryStream();var result=comp.Emit(bytes,manifestResources:new[]{new ResourceDescription("Equipment.Harmony.dll",()=>new MemoryStream(harmony),true)});
   if(!result.Success)throw new InvalidOperationException(string.Join("\n",result.Diagnostics.Where(d=>d.Severity==DiagnosticSeverity.Error)));
   File.WriteAllBytes(Path.Combine(output,"bridge.dll"),bytes.ToArray());using var module=Mono.Cecil.ModuleDefinition.ReadModule(Path.Combine(managed,"Assembly-CSharp.dll"));
@@ -39,8 +39,9 @@ public static class LiveEntry {
    if(args.Length==2&&args[0] is "attach" or "upgrade"){
     Directory.CreateDirectory(Root);using var gate=new FileStream(Path.Combine(Root,"connection.lock"),FileMode.OpenOrCreate,FileAccess.ReadWrite,FileShare.None);
     using var game=Game();long start=game.StartTime.ToUniversalTime().Ticks;var existing=LiveJson.Read<Frame>(Path.Combine(Root,"snapshot.json"));
+    if(existing!=null&&existing.ProcessId==game.Id&&existing.ProcessStartTicks==start&&existing.BridgeVersion!=LiveProtocol.BridgeVersion&&DateTime.UtcNow.Ticks-existing.AtUtcTicks<TimeSpan.FromSeconds(10).Ticks)throw new InvalidOperationException("An older equipment component is active. Stop the old tool and restart the game normally before connecting this version.");
     if(LiveProtocol.Ready(existing!,game.Id,start,DateTime.UtcNow.Ticks)){Console.WriteLine("Equipment connection ready.");return;}
-    var attempt=Path.Combine(Root,$"attach-v61-{game.Id}-{start}.json");if(File.Exists(attempt))throw new InvalidOperationException("Previous connection outcome is unresolved. Inspect diagnostics or restart the game before reconnecting.");
+    var attempt=Path.Combine(Root,$"attach-v62-{game.Id}-{start}.json");if(File.Exists(attempt))throw new InvalidOperationException("Previous connection outcome is unresolved. Inspect diagnostics or restart the game before reconnecting.");
     if(File.Exists(Path.Combine(Root,"command.json")))throw new InvalidOperationException("An equipment operation is still pending.");
     string payload=Path.GetFullPath(args[1]);var manifest=JsonDocument.Parse(File.ReadAllText(Path.Combine(Path.GetDirectoryName(payload)!,"bridge.json"))).RootElement;
     byte[] bytes=File.ReadAllBytes(payload);if(Convert.ToHexString(SHA256.HashData(bytes))!=manifest.GetProperty("sha256").GetString())throw new InvalidDataException("Component hash mismatch.");

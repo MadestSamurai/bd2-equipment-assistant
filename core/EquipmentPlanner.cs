@@ -3,7 +3,8 @@ using static BD2Equipment.Core.J;
 namespace BD2Equipment.Core;
 public static class EquipmentPlanner
 {
- public static readonly JsonObject Catalog=Resource("catalog.json");
+ public static JsonObject Catalog {get; private set;}=Resource("catalog.json");
+ internal static void Activate(JsonObject catalog)=>Catalog=catalog;
  public static long Rank(JsonNode catalog,JsonNode gear){var values=catalog["rank_values"]![S(catalog["equipment"]![S(gear["equipment_id"])]!["rank_group"])]!;var ranks=A(gear["ranks"]).ToArray();if(ranks.Length!=3)throw new InvalidOperationException("装备精炼数据不完整");return ranks.Select((r,i)=>{long v=Integer(r,"精炼档位",0,4);return v==0?0:N(values[i]![(int)v-1]);}).Sum();}
  public static JsonObject Refine(JsonObject stock,JsonObject settings){
   string mode=S(settings["batch_mode"],"target");if(mode is not "target" and not "higher")throw new InvalidOperationException("批量精炼模式无效");

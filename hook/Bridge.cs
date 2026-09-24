@@ -44,6 +44,7 @@ namespace BD2Equipment.Live {
   [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
   private static void Start(){lock(typeof(Bridge)){
    if(installed)return;
+   if(typeof(UIBase).Assembly.ManifestModule.ModuleVersionId.ToString()!=ClientNames.Mvid)throw new InvalidOperationException("Client changed after compilation; reconnect.");
    Directory.CreateDirectory(live);Directory.CreateDirectory(Path.Combine(live,"receipts"));Directory.CreateDirectory(Path.Combine(live,"claimed"));
    using(var p=Process.GetCurrentProcess()){pid=p.Id;start=p.StartTime.ToUniversalTime().Ticks;}
    // Equipment-only observation. Commands require a fresh account, scene and approved plan.

@@ -53,7 +53,7 @@ public partial class MainWindow:Window
  void StopClick(object sender,RoutedEventArgs e){Directory.CreateDirectory(WorkerClient.Data);File.WriteAllText(WorkerClient.StopPath,"stop");StatusText.Text=L.T("已请求停止，等待当前批次核账，不再提交下一批。");StopButton.IsEnabled=false;}
  void RecordsClick(object sender,RoutedEventArgs e){Directory.CreateDirectory(WorkerClient.Data);File.WriteAllText(Path.Combine(WorkerClient.Data,"HiGHS-LICENSE.txt"),BD2Equipment.Core.J.ResourceText("Highs.LICENSE.txt"));Process.Start(new ProcessStartInfo(WorkerClient.Data){UseShellExecute=true});}
  void WindowClosing(object? sender,CancelEventArgs e){if(!busy)return;e.Cancel=true;if(executing)StopClick(this,new());else StatusText.Text=L.T("正在完成读取或计算，请稍后关闭。");}
- internal async Task Smoke(string folder){Directory.CreateDirectory(folder);var bridge=await Task.Run(()=>WorkerClient.Invoke(["self-test"]));var result=await worker.Run(new(){["operation"]="self_test"});if(S(result["status"])!="passed")throw new Exception("Worker smoke failed");
+ internal async Task Smoke(string folder){worker.OfflineChecks=true;Directory.CreateDirectory(folder);var bridge=await Task.Run(()=>WorkerClient.Invoke(["self-test"]));var result=await worker.Run(new(){["operation"]="self_test"});if(S(result["status"])!="passed")throw new Exception("Worker smoke failed");
   var catalog=BD2Equipment.Core.EquipmentPlanner.Catalog;
   int equipmentId=943032;
   var demoGear=new JsonArray(Enumerable.Range(1,12).Select(i=>(JsonNode)new JsonObject{["instance"]=(10000+i).ToString(),["equipment_id"]=equipmentId,["level"]=i==3?0:9,["ranks"]=i==3?new JsonArray(0,0,0):new JsonArray(4,i%3+2,4),["locked"]=i%2==0,["kept"]=i==4,["equipped"]=i%2!=0}).ToArray());

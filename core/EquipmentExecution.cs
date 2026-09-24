@@ -39,9 +39,10 @@ public static class EquipmentService
 {
  public static JsonObject Handle(JsonObject job,Func<string[],string>? connection=null,Action<JsonObject>? progress=null){
   string op=S(job["operation"]);JsonObject result;
+  if(connection!=null&&op is not "capture" and not "self_test")LiveEquipment.ActivateCurrent();
   switch(op){
    case "capture":LiveEquipment.Prepare(connection??throw new InvalidOperationException("缺少连接入口"));using(var game=new LiveEquipment(true))return game.Capture();
-   case "execute":using(var game=new LiveEquipment())return EquipmentExecution.Execute(job["plan"]!.AsObject(),S(job["approved_id"]),game,progress);
+   case "execute":using(var game=new LiveEquipment()){game.RefreshCatalog();return EquipmentExecution.Execute(job["plan"]!.AsObject(),S(job["approved_id"]),game,progress);}
    case "gear_views":return new(){["gear"]=GearView.Build(job["stock"]!.AsObject(),job["details"]?.AsObject())};
    case "powder_plan":result=EquipmentPlanner.Powder(job["stock"]!.AsObject(),O(job["settings"]));break;
    case "refine_plan":result=EquipmentPlanner.Refine(job["stock"]!.AsObject(),O(job["settings"]));break;

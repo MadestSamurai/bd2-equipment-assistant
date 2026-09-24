@@ -4,7 +4,7 @@ using System.Linq;
 using System.Runtime.Serialization;
 namespace BD2Equipment.Live {
  public static class LiveProtocol {
-  public const int BridgeVersion=61;
+  public const int BridgeVersion=62;
   public static bool Ready(Frame f,int processId,long startTicks,long now,string previousInstance=null){
    return f!=null&&f.Protocol==1&&f.BridgeVersion==BridgeVersion&&f.ProcessId==processId&&f.ProcessStartTicks==startTicks&&f.AtUtcTicks>now-TimeSpan.FromSeconds(3).Ticks&&f.AtUtcTicks<=now+TimeSpan.FromSeconds(2).Ticks&&!string.IsNullOrEmpty(f.Instance)&&string.IsNullOrEmpty(f.Error)&&(previousInstance==null||f.Instance!=previousInstance);
   }
@@ -67,7 +67,7 @@ namespace BD2Equipment.Live {
    }
    if(PowderKind(c.Kind)){
     if(c.TargetId!=0||c.Items==null||ui.Type!=(c.Kind=="powder_recipe"?"EquipmentMakingSelectUI":"EquipmentUpgradePopupUI"))return "powder_surface_rejected";
-    if(c.Kind=="powder_recipe")return c.Value>=1&&c.Value<=10&&c.Items.Length==0?"":"powder_recipe_rejected";
+    if(c.Kind=="powder_recipe")return c.Value>=1&&c.Value<=int.MaxValue&&c.Items.Length==0?"":"powder_recipe_rejected";
     return c.Value>=1&&c.Value<=9&&c.Items.Length==1&&c.Items[0]>=1&&c.Items[0]<=int.MaxValue?"":"powder_options_rejected";
    }
    if(c.Kind=="equipment_craft_menu")return ui.Type=="MenuUI"&&c.TargetId==0?"":"preview_surface_rejected";

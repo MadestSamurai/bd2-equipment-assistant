@@ -4,7 +4,9 @@ using static BD2Equipment.Core.J;
 namespace BD2Equipment.Core;
 public static class GearView
 {
- static readonly JsonObject Display=Resource("display-catalog.json");
+ static JsonObject Display=Resource("display-catalog.json");
+ public static IReadOnlyDictionary<string,string> EnglishNames {get;private set;}=new Dictionary<string,string>();
+ internal static void Activate(JsonObject display){Display=display;EnglishNames=O(display["translations"]).ToDictionary(p=>p.Key,p=>S(p.Value));}
  static readonly string[] Stats=["","生命值","生命%","物攻值","物攻%","魔攻值","魔攻%","物防","魔防","暴击率","暴伤","水伤","火伤","风伤","光伤","暗伤","水抗","火抗","风抗","属性伤害","属性抗性"];
  static readonly string[] Aliases=["","生命力 HP","生命力 HP","物理攻击 攻击力 ATK","物理攻击 攻击力 ATK","魔法攻击 魔法力 MATK","魔法攻击 魔法力 MATK","防御力 防御 物抗 DEF","魔法抵抗 魔抗 MRES","暴率 暴擊率 CRIT","暴击伤害 暴擊傷害 CDMG"];
  static readonly string[] Slots=["武器","护甲","头盔","饰品","手套"],Qualities=["I","II","III","IV"],Ranks=["—","C","B","A","S"];
@@ -20,7 +22,7 @@ public static class GearView
   details??=new();var raw=A(details["equipment"]).ToDictionary(r=>S(r["InvenIndex"]));var chars=A(details["characters"]).ToDictionary(c=>S(c["InvenIndex"]),c=>S(Display["character_ids"]![S(c["Id"])]));
   string Name(string id)=>id is "" or "0"?"":S(Display["characters"]?[id]?["zh-CN"],"角色"+id);
   var rows=new JsonArray();foreach(var gear in A(stock["equipment"])){
-   string ident=S(gear["equipment_id"]),instance=S(gear["instance"]);var def=EquipmentPlanner.Catalog["equipment"]?[ident];if(def==null)continue;var meta=O(Display["equipment"]?[ident]);var item=raw.GetValueOrDefault(instance);var data=O(item?["BaseInfo"]);string charId=S(item?["UseChar"],"0"),uid=chars.GetValueOrDefault(charId,"");string owner=uid!=""?Name(uid):B(gear["equipped"])?"角色实例 "+charId:"未穿戴",exclusive=Name(S(meta["exclusive"],"0"));
+   string ident=S(gear["equipment_id"]),instance=S(gear["instance"]);var def=EquipmentPlanner.Catalog["equipment"]?[ident];if(def==null)throw new InvalidOperationException("Current equipment definition missing: "+ident);var meta=O(Display["equipment"]?[ident]);var item=raw.GetValueOrDefault(instance);var data=O(item?["BaseInfo"]);string charId=S(item?["UseChar"],"0"),uid=chars.GetValueOrDefault(charId,"");string owner=uid!=""?Name(uid):B(gear["equipped"])?"角色实例 "+charId:"未穿戴",exclusive=Name(S(meta["exclusive"],"0"));
    int grade=(int)N(def["grade"]);string rarity=(grade%10) switch{1=>"N",2=>"R",3=>"SR",4=>"UR",_=>throw new InvalidOperationException("装备稀有度未识别")};int q=(int)N(meta["quality"]);string quality=Qualities[q],slot=Slots[(int)N(meta["slot"])];var names=O(meta["names"]);string name=S(names["zh-CN"],S(def["name"]));long score=EquipmentPlanner.Rank(EquipmentPlanner.Catalog,gear);string ranks=string.Join(" / ",A(gear["ranks"]).Select(v=>Ranks[(int)N(v)]));
    var main=A(data["mainOption"]).ToArray();var subs=A(data["subOption"]).ToArray();var ex=O(data["privateOption"]);string mainText=string.Join(" · ",main.Select(o=>Option(o,data,true))),privateText=Option(ex,data,true),subText=string.Join(" · ",subs.Select(o=>Option(o,data,false)));if(mainText=="")mainText="未读取";if(subText=="")subText=N(gear["level"])<3?"未解锁":"未读取";
    var cost=EquipmentPlanner.Catalog["refine_cost"]![grade.ToString()]!;var state=new List<string>{owner};if(B(gear["locked"]))state.Add("已锁定");if(B(gear["kept"]))state.Add("保留中");

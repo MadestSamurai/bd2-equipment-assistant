@@ -17,18 +17,15 @@ public sealed class LiveEquipment:IEquipmentGame
 {
  public static string Root=>Path.Combine(Data,"live");
  static string P(string name)=>Path.Combine(Root,name);
+ static string activeCatalogActor="";
  FileStream? controller;JsonObject? original,request;bool configWritten;
  static readonly JsonObject Policy=Resource("ui-policy.json");
  const string Level="ὬὠὬὡὫὤὮὨὦὤὥ",Auto="ὬὭὪὣὣὨὭὭὩὯὨ",Count="ὧὤὯὭὨὨὦὥὡὦὫ",Price="ὩὥὦὦὭὨὢὩὧὫὦ",Recipe="ὤὭὠὥὤὠὡὣὣὠὣ.ὫὮὩὬὤὫὮὨὢὯὬ.Id",RefineGear="ὢὠὡὡὫὤὮὫὢὢὪ.InvenIndex",RefineMode="ὯὢὪὬὠὧὥὠὤὩὦ",RefineReady="ὠὠὡὭὧὫὫὭὥὣὯ";
  public static void Prepare(Func<string[],string> invoke){
-  Directory.CreateDirectory(Data);var location=JsonNode.Parse(invoke(["locate"]))!;string managed=S(location["managed"]);var source=EquipmentPlanner.Catalog["source"]!;
-  bool Match(string path,string expected){if(!File.Exists(path))return false;using var file=File.OpenRead(path);return Convert.ToHexString(SHA256.HashData(file)).Equals(expected,StringComparison.OrdinalIgnoreCase);}
-  if(!Match(Path.Combine(managed,"Assembly-CSharp.dll"),S(source["assemblySha256"])))throw new InvalidOperationException("游戏版本已变化，请更新工具后重新计算");
-  string data=Environment.GetEnvironmentVariable("BD2_DATA_ROOT")??Path.GetFullPath(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"..","LocalLow","Gamfs","BrownDust II","Data"));string db=S(source["databaseFile"]);
-  if(!new[]{Path.Combine(data,"t",db),Path.Combine(data,db)}.Any(p=>Match(p,S(source["databaseSha256"]))))throw new InvalidOperationException("游戏数据表已更新，请更新工具后重新计算，避免使用旧费用");
+  Directory.CreateDirectory(Data);var location=JsonNode.Parse(invoke(["locate"]))!;string managed=S(location["managed"]);
   JsonObject? frame=null;try{frame=Snapshot();if(!Equal(frame["ProcessId"],location["processId"])||!Equal(frame["ProcessStartTicks"],location["startTicks"]))frame=null;}catch(IOException){}catch(InvalidOperationException){}
   string prepared=Path.Combine(Data,"prepared");Directory.CreateDirectory(prepared);
-  if(frame==null||N(frame["BridgeVersion"])!=61){invoke(["prepare",managed,prepared]);invoke([frame==null?"attach":"upgrade",Path.Combine(prepared,"bridge.dll")]);}
+  if(frame==null||N(frame["BridgeVersion"])!=62){invoke(["prepare",managed,prepared]);invoke([frame==null?"attach":"upgrade",Path.Combine(prepared,"bridge.dll")]);}
   string spec=Path.Combine(prepared,"evidence-spec.json");Write(spec,Resource("evidence-spec.json"));invoke(["taps",managed,spec,Path.Combine(Data,"evidence-config.json")]);Snapshot();
  }
  public LiveEquipment(bool details=false){
@@ -43,8 +40,24 @@ public sealed class LiveEquipment:IEquipmentGame
  string Ensure(){if(request==null||N(request["ExpiresUtcTicks"])-DateTime.UtcNow.Ticks<TimeSpan.FromSeconds(5).Ticks){request=new(){["Id"]=Guid.NewGuid().ToString("N"),["Prefixes"]=new JsonArray("equipment","policy.equipment","powder","reward.presentation","trade.characters","trade.currency","trade.inventory"),["ExpiresUtcTicks"]=DateTime.UtcNow.AddSeconds(15).Ticks};Write(P("observation-request.json"),request);}return S(request["Id"]);}
  public static JsonObject Snapshot(){var f=Read(P("snapshot.json"));long age=DateTime.UtcNow.Ticks-N(f["AtUtcTicks"]);if(S(f["Error"])!=""||age<0||age>TimeSpan.FromSeconds(3).Ticks)throw new InvalidOperationException("游戏观察连接未就绪："+S(f["Error"]));return f;}
  JsonObject Evidence(JsonObject? before=null){string id=Ensure();var timer=Stopwatch.StartNew();while(true){var e=Read(P("evidence.json"));if(S(e["ObservationRequest"])!=id||S(e["Error"]).StartsWith("System.IO.IOException:")){if(timer.Elapsed.TotalSeconds>=3)throw new InvalidOperationException("库存观察尚未就绪");Thread.Sleep(100);continue;}long age=DateTime.UtcNow.Ticks-N(e["AtUtcTicks"]);if(S(e["Error"])!=""||age<0||age>TimeSpan.FromSeconds(3).Ticks)throw new InvalidOperationException("库存观察未就绪："+S(e["Error"]));if(before!=null&&LiveEvidence.Actor(before)!=LiveEvidence.Actor(e["Frame"]!))throw new InvalidOperationException("观察账号或游戏进程改变");return e;}}
- public JsonObject Capture(){var e=Evidence(Snapshot());Write(Path.Combine(Data,"capture-evidence.json"),e);var stock=EquipmentPlanner.Normalize(e);var details=new JsonObject{["equipment"]=LiveEvidence.Reading(e,"equipment.details","$items"),["characters"]=LiveEvidence.Reading(e,"trade.characters","$items")};if(A(details["equipment"]).Count()!=A(stock["equipment"]).Count())throw new InvalidOperationException("装备详情读取不完整");Write(Path.Combine(Data,"inventory.json"),stock);Write(Path.Combine(Data,"display-inventory.json"),details);return new(){["stock"]=stock,["gear"]=GearView.Build(stock,details),["resume"]=EquipmentExecution.Resumable(stock)};}
- public JsonObject Stock()=>EquipmentPlanner.Normalize(Evidence(Snapshot()));
+ public JsonObject Capture(){RefreshCatalog();var e=Evidence(Snapshot());Write(Path.Combine(Data,"capture-evidence.json"),e);var stock=EquipmentPlanner.Normalize(e);var details=new JsonObject{["equipment"]=LiveEvidence.Reading(e,"equipment.details","$items"),["characters"]=LiveEvidence.Reading(e,"trade.characters","$items")};if(A(details["equipment"]).Count()!=A(stock["equipment"]).Count())throw new InvalidOperationException("装备详情读取不完整");Write(Path.Combine(Data,"inventory.json"),stock);Write(Path.Combine(Data,"display-inventory.json"),details);return new(){["stock"]=stock,["gear"]=GearView.Build(stock,details),["resume"]=EquipmentExecution.Resumable(stock)};}
+ static string CatalogActor(JsonObject f)=>S(f["ProcessId"])+"|"+S(f["ProcessStartTicks"])+"|"+S(f["Instance"])+"|"+S(f["AccountKey"])+"|"+S(f["PlayerKey"]);
+ public void RefreshCatalog(){
+  var before=Snapshot();string actor=CatalogActor(before),id=Guid.NewGuid().ToString("N");
+  Write(P("catalog-request.json"),new JsonObject{["Id"]=id,["ExpiresUtcTicks"]=DateTime.UtcNow.AddSeconds(60).Ticks});
+  var timer=Stopwatch.StartNew();
+  try{while(timer.Elapsed.TotalSeconds<45){
+   if(CatalogActor(Snapshot())!=actor)throw new InvalidOperationException("Account changed during equipment table refresh");
+   if(File.Exists(P("catalog.json"))){var raw=Read(P("catalog.json"));if(S(raw["id"])==id){
+    if(S(raw["error"])!=""||S(raw["actor"])!=actor)throw new InvalidOperationException("Current equipment tables unavailable: "+S(raw["error"]));
+    var current=CurrentCatalog.Build(raw["tables"]!.AsObject(),S(raw["clientMvid"]));
+    Write(Path.Combine(Data,"current-catalog.json"),new JsonObject{["actor"]=actor,["catalog"]=current.Catalog.DeepClone(),["display"]=current.Display.DeepClone()});
+    EquipmentPlanner.Activate(current.Catalog);GearView.Activate(current.Display);activeCatalogActor=actor;return;
+   }}Thread.Sleep(100);
+  }throw new TimeoutException("Current equipment table refresh timed out");}finally{File.Delete(P("catalog-request.json"));}
+ }
+ public static void ActivateCurrent(){var f=Snapshot();var live=Read(Path.Combine(Data,"current-catalog.json"));if(S(live["actor"])!=CatalogActor(f))throw new InvalidOperationException("Please refresh inventory after changing game/account");EquipmentPlanner.Activate(live["catalog"]!.AsObject());GearView.Activate(live["display"]!.AsObject());activeCatalogActor=CatalogActor(f);}
+ public JsonObject Stock(){var frame=Snapshot();if(activeCatalogActor!=CatalogActor(frame))throw new InvalidOperationException("Refresh current inventory before execution");return EquipmentPlanner.Normalize(Evidence(frame));}
  public static void Stopped(){if(File.Exists(Stop))throw new StepRejected("已停止；当前已提交的批次仍会完成核账");}
  static void PauseGuard(){Stopped();if(File.Exists(P("pause")))throw new StepRejected("已暂停，未提交下一步操作");}
  public static string[] Blockers(JsonObject f,string type){var background=A(Policy["background_surfaces"]).Select(v=>S(v)).ToHashSet();var matches=A(f["Surfaces"]).Where(u=>S(u["Type"])==type).ToArray();JsonNode? target=matches.Length==1?matches[0]:null;

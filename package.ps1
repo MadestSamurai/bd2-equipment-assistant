@@ -13,7 +13,7 @@ try{
   if($LASTEXITCODE -ne 0){throw 'Publish failed'}
   $files=@(Get-ChildItem -LiteralPath $publish -File);if($files.Count -ne 1 -or $files[0].Name -ne 'BD2EquipmentAssistant.exe' -or $files[0].Length -ge 80MB){throw 'Expected one EXE smaller than 80 MiB'}
   $alone=Join-Path $work "$flavor-alone";New-Item -ItemType Directory -Path $alone|Out-Null;$exe=Join-Path $alone 'EquipmentStandalone.exe';Copy-Item -LiteralPath $files[0].FullName -Destination $exe
-  function Run([string[]]$Arguments){$p=Start-Process -FilePath $exe -ArgumentList $Arguments -WorkingDirectory (Get-Location).Path -WindowStyle Hidden -PassThru;if(!$p.WaitForExit(45000)){throw 'Packaged check timed out'};if($p.ExitCode -ne 0){throw ('Packaged check failed: '+($Arguments -join ' '))}}
+  function Run([string[]]$Arguments){$p=Start-Process -FilePath $exe -ArgumentList $Arguments -WorkingDirectory (Get-Location).Path -WindowStyle Hidden -PassThru;if(!$p.WaitForExit(120000)){throw 'Packaged check timed out'};if($p.ExitCode -ne 0){throw ('Packaged check failed: '+($Arguments -join ' '))}}
   $env:BD2_EQUIPMENT_DATA_ROOT=Join-Path $work "$flavor-fresh-data";$env:PYTHONHOME='Z:\not-installed';$env:PYTHONPATH='Z:\not-installed';$env:PATH="$env:WINDIR\System32;$env:WINDIR"
   foreach($mode in @('cold','warm','english')){$folder=Join-Path $work "$flavor-$mode";$switch=if($mode -eq 'english'){'--smoke-en'}else{'--smoke'};Run @($switch,('"'+$folder+'"'));$check=Get-Content (Join-Path $folder 'smoke.json') -Raw -Encoding UTF8|ConvertFrom-Json;if($check.status -ne 'passed' -or $check.engine -ne 'C# in-process'){throw 'Standalone check failed'}}
   $env:PYTHONHOME=$previousPython;$env:PYTHONPATH=$previousPythonPath;$env:PATH=$previousPath
