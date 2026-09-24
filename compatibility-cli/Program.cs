@@ -1,6 +1,12 @@
 using BD2Equipment.Compatibility;
 using Mono.Cecil;
 using System.Text.Json;
+if(args[0]=="cleanup-result"){
+ var frame=BD2Equipment.Core.LiveEquipment.Snapshot();
+ if(!BD2Equipment.Core.EquipmentUiFlow.Has(frame,"EquipmentBatchUpgradeResultPopupUI"))throw new InvalidOperationException("Expected existing equipment batch result");
+ using var game=new BD2Equipment.Core.LiveEquipment();game.Cleanup("EquipmentMakingUI");
+ Console.WriteLine("Existing result closed; crafting page ready; no resource action submitted.");return;
+}
 if(args[0]=="read-only-capture"){
  using var game=new BD2Equipment.Core.LiveEquipment(true);var captured=game.Capture();
  Console.WriteLine(JsonSerializer.Serialize(new{status="passed",equipment=captured["gear"]!.AsArray().Count,recipes=BD2Equipment.Core.EquipmentPlanner.Catalog["recipes"]!.AsArray().Count,resourcesSpent=false}));return;

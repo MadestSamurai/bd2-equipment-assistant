@@ -7,6 +7,9 @@ public static class PolicyChecks {
  c.AccountKey="other";Check(Gate()=="identity_changed");c.AccountKey="a";c.UiToken="old";Check(Gate()=="screen_changed");c.UiToken="u";f.AtUtcTicks=now-TimeSpan.FromSeconds(4).Ticks;Check(Gate()=="stale_frame");f.AtUtcTicks=now;
  Check(LivePolicy.Gate(c,f,now,true)=="another_operation_owns_game");c.Kind="trade_buy_confirm";Check(Gate()=="unsupported_command");c.Kind="equipment_refine_batch";f.Surfaces[0].InputReady=false;Check(Gate()=="ui_not_ready");f.Surfaces[0].InputReady=true;
  f.Surfaces=f.Surfaces.Concat(new[]{new Surface{Id=4,Type="MessagePopupUI",Popup=true,Order=2,Path="ui/message"}}).ToArray();Check(Gate()=="foreground_popup");f.Surfaces=f.Surfaces.Take(1).ToArray();c.Kind="powder_options";c.Items=new long[]{100};c.Value=7;f.Surfaces[0].Type="EquipmentUpgradePopupUI";Check(Gate()=="");c.Value=0;Check(Gate()!="");c.Value=7;c.Items[0]=0;Check(Gate()!="");
- Check(LiveProtocol.Ready(f,1,2,now));Check(!LiveProtocol.Ready(f,1,3,now));return "Equipment connection checks: "+checks;
+ Check(LiveProtocol.Ready(f,1,2,now));Check(!LiveProtocol.Ready(f,1,3,now));
+ c.Kind="back";f.Surfaces=new[]{new Surface{Id=3,Type="ItemGetPopupUI",Path="ui/item",Popup=true,Order=1000},new Surface{Id=4,Type="EquipmentInfoPopupUI",Path="ui/item/card",Popup=true,Order=1000}};
+ Check(Gate()=="");f.Surfaces[1].Path="ui/other";Check(Gate()=="foreground_popup");
+return "Equipment connection checks: "+checks;
  }
 }

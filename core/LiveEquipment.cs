@@ -12,6 +12,7 @@ public interface IEquipmentGame:IDisposable
  JsonObject Transaction(JsonObject journal,string role,JsonObject action,Func<JsonObject,JsonArray,JsonObject,JsonObject> verify);
  IDisposable EnableActions();
  void Cleanup(string destination);
+ void CompletePresentation(string role,bool waitForResult=true){}
 }
 public sealed class LiveEquipment:IEquipmentGame
 {
@@ -25,7 +26,7 @@ public sealed class LiveEquipment:IEquipmentGame
   Directory.CreateDirectory(Data);var location=JsonNode.Parse(invoke(["locate"]))!;string managed=S(location["managed"]);
   JsonObject? frame=null;try{frame=Snapshot();if(!Equal(frame["ProcessId"],location["processId"])||!Equal(frame["ProcessStartTicks"],location["startTicks"]))frame=null;}catch(IOException){}catch(InvalidOperationException){}
   string prepared=Path.Combine(Data,"prepared");Directory.CreateDirectory(prepared);
-  if(frame==null||N(frame["BridgeVersion"])!=63){invoke(["prepare",managed,prepared]);invoke([frame==null?"attach":"upgrade",Path.Combine(prepared,"bridge.dll")]);}
+  if(frame==null||N(frame["BridgeVersion"])!=64){invoke(["prepare",managed,prepared]);invoke([frame==null?"attach":"upgrade",Path.Combine(prepared,"bridge.dll")]);}
   string spec=Path.Combine(prepared,"evidence-spec.json");Write(spec,Resource("evidence-spec.json"));invoke(["taps",managed,spec,Path.Combine(Data,"evidence-config.json")]);Snapshot();
  }
  public LiveEquipment(bool details=false){
@@ -61,20 +62,27 @@ public sealed class LiveEquipment:IEquipmentGame
  public static void Stopped(){if(File.Exists(Stop))throw new StepRejected("已停止；当前已提交的批次仍会完成核账");}
  static void PauseGuard(){Stopped();if(File.Exists(P("pause")))throw new StepRejected("已暂停，未提交下一步操作");}
  public static string[] Blockers(JsonObject f,string type){var background=A(Policy["background_surfaces"]).Select(v=>S(v)).ToHashSet();var matches=A(f["Surfaces"]).Where(u=>S(u["Type"])==type).ToArray();JsonNode? target=matches.Length==1?matches[0]:null;
-  return A(f["Surfaces"]).Where(u=>B(u["Popup"])&&S(u["Type"])!=type&&!background.Contains(S(u["Type"]))&&!(target!=null&&S(target["Path"]).StartsWith(S(u["Path"],"\0")+"/"))&&!(target!=null&&B(target["Popup"])&&target["Order"]!=null&&u["Order"]!=null&&N(u["Order"])<N(target["Order"]))).Select(u=>S(u["Type"])).ToArray();
+  return A(f["Surfaces"]).Where(u=>B(u["Popup"])&&S(u["Type"])!=type&&!background.Contains(S(u["Type"]))&&!(target!=null&&S(target["Path"]).StartsWith(S(u["Path"],"\0")+"/"))&&!(target!=null&&S(target["Type"])=="ItemGetPopupUI"&&S(u["Type"])=="EquipmentInfoPopupUI"&&S(u["Path"]).StartsWith(S(target["Path"],"\0")+"/"))&&!(target!=null&&B(target["Popup"])&&target["Order"]!=null&&u["Order"]!=null&&N(u["Order"])<N(target["Order"]))).Select(u=>S(u["Type"])).ToArray();
  }
  static HashSet<string> Types(JsonObject f)=>A(f["Surfaces"]).Select(u=>S(u["Type"])).ToHashSet();
  public void Step(string ui,string? field=null,bool back=false,string? expect=null,string? absent=null,string? operation=null,JsonArray? items=null,long value=0,string reason="装备助手：用户已确认的操作"){
   string Context(JsonObject f)=>Canonical(Select(f,"ProcessId","ProcessStartTicks","Instance","AccountKey","PlayerKey","Scene"));
   var initial=Snapshot();string bound=Context(initial);var timer=Stopwatch.StartNew();
   for(int attempt=0;attempt<6;attempt++){
-   while(true){PauseGuard();var f=Snapshot();if(Context(f)!=bound)throw new StepRejected("账号或场景改变，未发送操作");var found=A(f["Surfaces"]).Where(u=>S(u["Type"])==ui).ToArray();if(found.Length!=1||found[0]["InputReady"]==null||B(found[0]["InputReady"]))break;if(timer.Elapsed.TotalSeconds>=20)throw new StepRejected("界面尚未就绪，未发送操作");Thread.Sleep(200);}
+   while(true){PauseGuard();var f=Snapshot();if(Context(f)!=bound)throw new StepRejected("账号或场景改变，未发送操作");var popup=EquipmentUiFlow.DismissibleBlocker(f,ui);if(popup!=null){DismissBeforeDispatch(popup);if(timer.Elapsed.TotalSeconds>=20)throw new StepRejected("结果界面持续变化，尚未提交下一步");continue;}var found=A(f["Surfaces"]).Where(u=>S(u["Type"])==ui).ToArray();if(found.Length!=1||found[0]["InputReady"]==null||B(found[0]["InputReady"]))break;if(timer.Elapsed.TotalSeconds>=20)throw new StepRejected("界面尚未就绪，未发送操作");Thread.Sleep(200);}
    try{StepOnce(ui,field,back,expect,absent,operation,items,value,reason);return;}
    catch(StepRejected ex)when(attempt<5&&ex.Message is "rejected: screen_changed" or "rejected: ui_not_ready"){Thread.Sleep(600);}
-   catch(StepRejected ex)when(attempt<5&&ui!="NewsPopupEventUI"&&ex.Message=="Foreground popup needs handling: NewsPopupEventUI"){
-    var f=Snapshot();if(Context(f)!=bound||!Types(f).Contains("MenuUI")||!Blockers(f,ui).SequenceEqual(new[]{"NewsPopupEventUI"}))throw;Step("NewsPopupEventUI",back:true,absent:"NewsPopupEventUI");
+   catch(StepRejected ex)when(attempt<5&&(ex.Message.StartsWith("Foreground popup needs handling:")||ex.Message=="rejected: foreground_popup")){
+    var f=Snapshot();if(Context(f)!=bound)throw;
+    string? popup=EquipmentUiFlow.DismissibleBlocker(f,ui);if(popup==null)throw;
+    DismissBeforeDispatch(popup);
    }
   }
+ }
+ void DismissBeforeDispatch(string popup){
+  var action=EquipmentUiFlow.Dismiss(popup);
+  try{Step(action.Ui,action.Field,action.Back,action.Expect,action.Absent,reason:"关闭结果展示，再校验尚未提交的操作");}
+  catch(Exception e){throw new StepRejected("结果界面尚未关闭，未提交下一笔操作："+e.Message);}
  }
  void StepOnce(string ui,string? field,bool back,string? expect,string? absent,string? operation,JsonArray? items,long value,string reason){
   PauseGuard();var before=Snapshot();var candidates=A(before["Surfaces"]).Where(u=>S(u["Type"])==ui).ToArray();if(candidates.Length!=1)throw new StepRejected("找不到唯一界面："+ui);var surface=candidates[0];var blockers=Blockers(before,ui);if(blockers.Length>0)throw new StepRejected("Foreground popup needs handling: "+string.Join(", ",blockers));
@@ -85,16 +93,17 @@ public sealed class LiveEquipment:IEquipmentGame
   Write(Path.Combine(dir,"result.json"),new JsonObject{["state"]="unknown_timeout",["receipt"]=receipt});throw new InvalidOperationException("操作结果未确认；已保存证据，不会自动重发");
  }
  JsonObject WaitRead(string name,string path,Func<JsonNode?,bool> predicate){string actor=LiveEvidence.Actor(Snapshot());var timer=Stopwatch.StartNew();while(timer.Elapsed.TotalSeconds<25){PauseGuard();var frame=Snapshot();if(LiveEvidence.Actor(frame)!=actor)throw new InvalidOperationException("账号已切换");try{var e=Evidence(frame);if(predicate(LiveEvidence.Reading(e,name,path)))return e;}catch(InvalidOperationException){}Thread.Sleep(250);}throw new InvalidOperationException("原生界面状态未就绪："+name+"."+path);}
- public void Cleanup(string destination="MenuUI"){
-  string actor=LiveEvidence.Actor(Snapshot());var timer=Stopwatch.StartNew();var allowed=new[]{"EquipmentBatchUpgradeResultPopupUI","EquipmentUpgradeResultPopupUI","EquipmentUpgradeUI","EquipmentMakingUI","EquipmentMakingSelectUI","InventoryManageUI","MailUI"}.ToHashSet();
-  while(timer.Elapsed.TotalSeconds<45){PauseGuard();var f=Snapshot();if(LiveEvidence.Actor(f)!=actor)throw new InvalidOperationException("收尾期间账号改变");var types=Types(f);
-   var popup=new[]{"EquipmentBatchUpgradeResultPopupUI","EquipmentUpgradeResultPopupUI","EquipmentUpgradePopupUI","NewsPopupEventUI"}.FirstOrDefault(t=>types.Contains(t)&&Blockers(f,t).Length==0);
-   if(popup!=null){Step(popup,back:true,absent:popup);continue;}
-   if(A(f["Surfaces"]).Any(u=>S(u["Type"])==destination&&B(u["InputReady"]))&&Blockers(f,destination).Length==0)return;
-   if(destination=="MenuUI"&&types.Contains("GameFieldDefaultUI")&&!types.Contains("MenuUI")){Step("GameFieldDefaultUI","_buttonMenu",expect:"MenuUI");continue;}
-   if(destination=="MenuUI"&&A(f["Surfaces"]).Any(u=>S(u["Type"])=="ItemGetPopupUI"&&B(u["InputReady"]))&&Blockers(f,"ItemGetPopupUI").Length==0){Step("ItemGetPopupUI","_objBackButton",absent:"ItemGetPopupUI");continue;}
-   var next=A(f["Surfaces"]).Where(u=>allowed.Contains(S(u["Type"]))&&B(u["InputReady"])&&Blockers(f,S(u["Type"])).Length==0).OrderByDescending(u=>N(u["Order"])).FirstOrDefault();if(next!=null)Step(S(next["Type"]),back:true,absent:S(next["Type"]));Thread.Sleep(250);
-  }throw new InvalidOperationException("界面尚未稳定，已保留确认结果，不会重做消费");
+ public void Cleanup(string destination="MenuUI")=>CleanupResult(destination,null);
+ void CleanupResult(string destination,string? expected){
+  var timer=Stopwatch.StartNew();EquipmentUiFlow.Cleanup(destination,expected,Snapshot,
+   a=>Step(a.Ui,a.Field,a.Back,a.Expect,a.Absent,reason:"已核账业务的结果界面收尾"),PauseGuard,()=>Thread.Sleep(100),()=>timer.Elapsed.TotalSeconds);
+ }
+ public void CompletePresentation(string role,bool waitForResult=true){
+  if(role=="powder.make_break")CleanupResult("EquipmentMakingUI",waitForResult?"EquipmentBatchUpgradeResultPopupUI":null);
+  else {
+   CleanupResult("EquipmentUpgradeUI",waitForResult?"EquipmentUpgradeResultPopupUI":null);
+   WaitRead("equipment.refine_ui",LiveEvidence.RefineAuto,n=>n?.GetValue<bool>()==false);
+  }
  }
  public int PowderPreview(JsonNode recipe,int count,int level){var types=Types(Snapshot());long recipeId=N(recipe["id"]);
   if(types.Contains("EquipmentMakingUI")){Cleanup("EquipmentMakingUI");var e=Evidence(Snapshot());if(N(LiveEvidence.Reading(e,"powder.craft",Recipe))!=recipeId){Cleanup("EquipmentMakingSelectUI");Step("EquipmentMakingSelectUI",operation:"powder_recipe",value:recipeId,expect:"EquipmentMakingUI");}}

@@ -1,12 +1,13 @@
-# BD2 Equipment Assistant v0.3.1
+# BD2 Equipment Assistant v0.3.2
 
 ## 简体中文
 
 ### 更新内容
 
-- 修复 0.3.0 连接后读取库存失败，提示 `Native table unavailable: EquipmentTable` 的问题。
-- 修正当前游戏数据表的读取入口；装备、制作配方及精炼费用继续从本机游戏读取。
-- 保留中英切换、跨版本接口适配、批量制作与精炼功能。
+- 修复批量制作完成首批后，被延迟出现的结果弹窗中断的问题。
+- 将资源结算与结果界面收尾分开：确认结果展示已关闭后，再进入下一批。
+- 修复结果弹窗叠层、装备奖励详情卡被误判为遮挡，以及页面还未就绪时误退回上一层的问题。
+- 收尾中断会保留已核账进度，恢复后只处理剩余数量；不会重复制作或盲目确认未知弹窗。
 
 ### 下载
 
@@ -25,9 +26,10 @@
 
 ### Changes
 
-- Fixes inventory capture failing after connection in v0.3.0 with `Native table unavailable: EquipmentTable`.
-- Corrects the game's table-reading API selection. Equipment, crafting recipes and refinement costs still come from the installed game.
-- Retains Chinese/English language switching, cross-version interface binding, batch crafting and batch refinement.
+- Fixes batch crafting stopping when its result popup appears after the first batch has settled.
+- Separates resource settlement from result presentation; the next batch starts only after its result UI is handled.
+- Fixes stacked result windows, embedded equipment reward cards being treated as blockers, and backing out of a page that is still becoming ready.
+- Keeps verified progress if UI cleanup is interrupted. Resuming handles only the remaining quantity, without repeating crafting or blindly accepting unknown dialogs.
 
 ### Downloads
 

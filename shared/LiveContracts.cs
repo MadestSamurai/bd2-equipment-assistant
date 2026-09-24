@@ -4,7 +4,7 @@ using System.Linq;
 using System.Runtime.Serialization;
 namespace BD2Equipment.Live {
  public static class LiveProtocol {
-  public const int BridgeVersion=63;
+  public const int BridgeVersion=64;
   public static bool Ready(Frame f,int processId,long startTicks,long now,string previousInstance=null){
    return f!=null&&f.Protocol==1&&f.BridgeVersion==BridgeVersion&&f.ProcessId==processId&&f.ProcessStartTicks==startTicks&&f.AtUtcTicks>now-TimeSpan.FromSeconds(3).Ticks&&f.AtUtcTicks<=now+TimeSpan.FromSeconds(2).Ticks&&!string.IsNullOrEmpty(f.Instance)&&string.IsNullOrEmpty(f.Error)&&(previousInstance==null||f.Instance!=previousInstance);
   }
@@ -60,7 +60,7 @@ namespace BD2Equipment.Live {
    if(c.Kind=="detach")return "";
    var ui=f.Surfaces.SingleOrDefault(u=>u.Id==c.SurfaceId);if(ui==null)return "surface_missing";
    if(!ui.InputReady)return "ui_not_ready";
-   if(f.Surfaces.Any(x=>x.Popup&&x.Id!=ui.Id&&x.Order>=ui.Order&&!new[]{"NoticeUI","CharNoticeUI","DetailNoticeUI","CurrencyManageUI","OverheadManageUI"}.Contains(x.Type)&&!ui.Path.StartsWith(x.Path+"/")))return "foreground_popup";
+   if(f.Surfaces.Any(x=>x.Popup&&x.Id!=ui.Id&&x.Order>=ui.Order&&!new[]{"NoticeUI","CharNoticeUI","DetailNoticeUI","CurrencyManageUI","OverheadManageUI"}.Contains(x.Type)&&!ui.Path.StartsWith(x.Path+"/")&&!(ui.Type=="ItemGetPopupUI"&&x.Type=="EquipmentInfoPopupUI"&&x.Path.StartsWith(ui.Path+"/"))))return "foreground_popup";
    if(c.Kind=="equipment_refine_batch"){
     if(c.TargetId!=0||ui.Type!="EquipmentUpgradeUI")return "refine_batch_context_rejected";
     return c.Value>=1&&c.Value<=24&&c.Items!=null&&c.Items.Length==4&&c.Items.All(x=>x>0)&&c.Items[1]<=5000&&c.Items[2]<=2000000000&&c.Items[3]<=2000000000?"":"refine_batch_budget_rejected";

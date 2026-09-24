@@ -16,6 +16,13 @@ public static class EquipmentExecution
   }catch(IOException){}catch(InvalidOperationException){}catch(KeyNotFoundException){}catch(System.Text.Json.JsonException){}
   return null;
  }
+ static void Presentation(JsonObject journal,IEquipmentGame game,string role,bool waitForResult=true){
+  string path=Path.Combine(Data,S(journal["id"])+".json");
+  journal["presentation"]=new JsonObject{["state"]="pending",["role"]=role};Write(path,journal);
+  if(File.Exists(Stop))return;
+  try{game.CompletePresentation(role,waitForResult);journal["presentation"]!["state"]="completed";Write(path,journal);}
+  catch(Exception e){journal["presentation"]!["error"]=e.Message;Write(path,journal);throw;}
+ }
  public static JsonObject Execute(JsonObject plan,string approved,IEquipmentGame game,Action<JsonObject>? progress=null){
   EquipmentPlanner.Validate(plan);if(approved!=S(plan["id"]))throw new InvalidOperationException("必须确认当前计划才可执行");bool powder=S(plan["kind"])=="powder";
   if(!powder){string mode=S(plan["batch_mode"]);if(N(plan["schema"])!=2||mode is not "target" and not "higher")throw new InvalidOperationException("请重新计算批量精炼计划并确认模式");Integer(plan["batch_size"],"单批次数",1,5000);Integer(plan["target"],"目标等级",1,24);if(N(plan["native_target"])!=(mode=="higher"?24:N(plan["target"])))throw new InvalidOperationException("原生目标与计划模式不符");}
@@ -23,13 +30,14 @@ public static class EquipmentExecution
   JsonObject journal;if(File.Exists(path)){journal=Read(path);if(journal["pending"]!=null&&S(journal["pending"]!["state"])!="rejected")throw new InvalidOperationException("上次操作结果未知，请先核对账本；不会重复消耗");if(S(journal["state"])=="completed")return journal;}
   else journal=new(){["id"]=Clone(plan["id"]),["kind"]=Clone(plan["kind"]),["plan"]=Copy(plan),["operations"]=new JsonArray(),["pending"]=null,["expected"]=Clone(plan["stock"]),["state"]="ready"};
   Guard(plan,journal["expected"]!.AsObject(),game);using var actionScope=game.EnableActions();
+  if(S(journal["presentation"]?["state"])=="pending")Presentation(journal,game,S(journal["presentation"]?["role"]),false);
   if(powder){var recipes=A(EquipmentPlanner.Catalog["recipes"]).ToDictionary(r=>N(r["id"]));foreach(var row in A(plan["rows"])){long made=A(journal["operations"]).Where(o=>N(o["result"]?["recipe"])==N(row["recipe"])).Sum(o=>N(o["result"]?["count"]));while(made<N(row["count"])){
    Guard(plan,journal["expected"]!.AsObject(),game);int count=(int)Math.Min(A(journal["operations"]).Any()?N(row["count"])-made:10,N(row["count"])-made);var recipe=recipes[N(row["recipe"])];int level=(int)N(plan["level"]);count=game.PowderPreview(recipe,count,level);Guard(plan,journal["expected"]!.AsObject(),game);
-   var result=game.Transaction(journal,"powder.make_break",new(){["ui"]="EquipmentUpgradePopupUI",["field"]="_buttonAccept",["reason"]="执行用户已确认的N装制作强化分解预算"},(old,packets,current)=>LiveEvidence.VerifyPowder(recipe,count,level,old,packets[0]!.AsObject(),current));made+=N(result["count"]);progress?.Invoke(LiveEvidence.Progress(journal));
+   var result=game.Transaction(journal,"powder.make_break",new(){["ui"]="EquipmentUpgradePopupUI",["field"]="_buttonAccept",["reason"]="执行用户已确认的N装制作强化分解预算"},(old,packets,current)=>LiveEvidence.VerifyPowder(recipe,count,level,old,packets[0]!.AsObject(),current));made+=N(result["count"]);progress?.Invoke(LiveEvidence.Progress(journal));Presentation(journal,game,"powder.make_break");
   }}}
   else foreach(var row in A(plan["rows"]))while(true){var stock=Guard(plan,journal["expected"]!.AsObject(),game);string instance=S(row["instance"]);var gear=A(stock["equipment"]).Single(g=>S(g["instance"])==instance);if(EquipmentPlanner.Rank(EquipmentPlanner.Catalog,gear)>=N(plan["target"]))break;
    var cost=row["cost"]!;int count=(int)LiveEvidence.BatchCount(plan,LiveEvidence.Progress(journal),cost);if(count<1){journal["state"]="budget_exhausted";Write(path,journal);return journal;}game.RefinePreview(instance);Guard(plan,journal["expected"]!.AsObject(),game);int native=(int)N(plan["native_target"]);
-   var result=game.Transaction(journal,"equipment.refine_batch",new(){["ui"]="EquipmentUpgradeUI",["operation"]="equipment_refine_batch",["value"]=native,["items"]=new JsonArray(long.Parse(instance),count,N(cost["gold"])*count,N(cost["powder"])*count),["reason"]="执行已确认预算内的原生批量精炼"},(old,packets,current)=>LiveEvidence.VerifyRefine(instance,cost,count,native,old,packets,current));progress?.Invoke(LiveEvidence.Progress(journal));
+   var result=game.Transaction(journal,"equipment.refine_batch",new(){["ui"]="EquipmentUpgradeUI",["operation"]="equipment_refine_batch",["value"]=native,["items"]=new JsonArray(long.Parse(instance),count,N(cost["gold"])*count,N(cost["powder"])*count),["reason"]="执行已确认预算内的原生批量精炼"},(old,packets,current)=>LiveEvidence.VerifyRefine(instance,cost,count,native,old,packets,current));progress?.Invoke(LiveEvidence.Progress(journal));Presentation(journal,game,"equipment.refine_batch");
    if(N(result["score"])<N(plan["target"])&&(N(result["attempts"])<count||A(result["lack_items"]).Any())){journal["state"]="native_stopped";journal["stop_reason"]=Clone(result["native_result"]);Write(path,journal);return journal;}
   }
   journal["state"]="completed";Write(path,journal);if(A(journal["operations"]).Any()&&!File.Exists(Stop))game.Cleanup(powder?"EquipmentMakingUI":"EquipmentUpgradeUI");return journal;
