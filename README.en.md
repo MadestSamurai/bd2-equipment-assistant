@@ -1,0 +1,82 @@
+# BD2 Equipment Assistant
+
+> **Disclaimer:** Using this assistant carries risks, including account penalties, bans, game errors or data loss. This project is not affiliated with the game publisher and does not guarantee safe use. Review and follow the game rules; you are responsible for the risks and consequences of using this tool.
+
+English · [简体中文](README.md)
+
+[Download releases](https://github.com/MadestSamurai/bd2-equipment-assistant/releases) · [Report an issue](https://github.com/MadestSamurai/bd2-equipment-assistant/issues)
+
+A standalone equipment assistant for BrownDust II on Windows. Plan N-grade gear crafting, enhancement and dismantling with your existing resources, or batch-refine selected equipment within a budget.
+
+## Download
+
+Current version: **0.2.0-beta.1**. One application includes Simplified Chinese and English. Start with a small budget when evaluating this beta.
+
+| Edition | Runtime requirement | Recommended for |
+| --- | --- | --- |
+| **Portable** | Includes .NET; no separate installation | Most users |
+| **Lite** | Requires [.NET Desktop Runtime 8 x64](https://dotnet.microsoft.com/download/dotnet/8.0) | Users with the desktop runtime who prefer a smaller download |
+
+Windows x64 only. Both editions have the same features. Each EXE works on its own; ZIP files also include bilingual documentation and licenses. No Python, .NET SDK, private workbench or daily assistant is required. Lite needs **Desktop Runtime**, not just the regular .NET Runtime. Verify downloads with `SHA256SUMS.txt`.
+
+## Quick start
+
+1. Start the game normally and enter town. Keep one game instance and use the same Windows privileges for both programs.
+2. Open the EXE and select **Connect and read inventory**. Opening the tool does not connect or consume resources.
+3. In **Craft N gear for powder**, set the enhancement level, quantity or budget and calculate a plan. Alternatively, use **Batch refinement** to filter and select exact equipment instances, then calculate with your target and budget.
+4. Review gold, materials, Ability Pills, expected powder or refinement budget, confirm in the review dialog, then execute.
+5. **Stop** prevents further batches. An already-submitted game batch finishes and is reconciled first; consumed resources cannot be undone.
+
+When upgrading from private version 0.1.6, stop and close the old tool. If another assistant or the private workbench has connected to this game session, restart the game normally before connecting the public edition. Existing plans and journals are preserved; read inventory, calculate and confirm again before executing a new plan.
+
+## Features and settings
+
+| Feature / setting | Behavior |
+| --- | --- |
+| Powder planning | Selects a combination of N-grade recipes using current gold, pills, materials and limits; shows full costs and expected powder before execution |
+| Enhance then dismantle | Default +7; supports +1 through +9 using the game's native batch crafting and dismantling flow |
+| 5-pill recipes | Off by default; enabling includes N-grade recipes that consume more pills |
+| Quantity, gold and pill limits | Blank means limited by current inventory. No automatic pill purchases, material synthesis or paid-resource top-ups |
+| Crafting batches | Verifies a small first batch, then uses the game's actual batch capacity; not fixed at 100 items |
+| Equipment selection | Search by name, character or instance ID; filter by slot, type, rarity, quality, wearer, lock, keep flag, enhancement, refinement and main/substats |
+| Identical names | Shows instance ID, wearer, stats and refinement components; only explicitly selected instances are processed |
+| Refinement target | 1–24, default 24; only equipment already enhanced to +9 is eligible, with no automatic enhancement |
+| Refinement budgets | Defaults: 100,000 gold and 10,000 powder, shared across all selected equipment |
+| Native batch refinement | Default maximum 5,000 attempts per batch; reduced to fit the remaining budget |
+| Stop at target | Default mode: sets the in-game target to your chosen level, allowing the game's early-stop rule |
+| Aim higher | Optional: sets the in-game target to 24, then checks your chosen target after the batch. Can consume more resources to pursue a higher result |
+
+Refinement is random; a budget does not guarantee the target. Locked, kept or equipped gear can still be deliberately selected for refinement, so review instance details. Account changes, inventory changes, price mismatches or unconfirmed results stop execution. Unknown outcomes retain their journal and are never automatically resent; do not delete records to force a retry.
+
+## Language
+
+First launch follows the system language. Use the top-right switch for Simplified Chinese or English. The preference is saved, and switching preserves the plan, selections and filters. Switching is disabled during execution. Character and equipment search supports Chinese and English. Low-level diagnostics, interface names and some exceptions retain their original text.
+
+## Compatibility and limits
+
+Requires the official Windows client, not an Android emulator. The connection component is compiled locally, but resource costs and fields must match the client: **a game program or data update that fails validation requires a tool update**. The tool will not continue with outdated prices.
+
+The repository includes static equipment names, stats and crafting/refinement cost metadata. It does not include game DLLs, images, account inventories, private captures or automation for other modes. Building requires no game installation; connecting does.
+
+## Diagnostics and feedback
+
+Local data is stored in `%LOCALAPPDATA%\BD2EquipmentAssistant`, including language settings, inventory, plans, transaction journals and connection diagnostics. The tool does not upload it.
+
+Report the version, full error text, steps and relevant diagnostic excerpts. Never submit credentials, full inventories or game resources. Reconcile unconfirmed consumption against the game and journal before trying again.
+
+## Development and contributions
+
+Requires Windows, PowerShell and .NET 8 SDK. From this repository root:
+
+```powershell
+.\build.ps1 -Locked
+.\package.ps1 -Locked
+```
+
+Packages go to `dist/v0.2.0-beta.1/`. The public source builds independently, without other BD2 repositories or Python.
+
+[Development](docs/DEVELOPMENT.md) · [Localization](docs/LOCALIZATION.md) · [Publication style](docs/PUBLICATION_STYLE.md) · [Release notes](docs/RELEASE_NOTES.md)
+
+## License
+
+Project code is licensed under [MIT](LICENSE). See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) and `licenses/` for dependencies. Game content belongs to its respective rights holders.
