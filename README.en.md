@@ -1,6 +1,8 @@
 # BD2 Equipment Assistant
 
-> **Disclaimer:** Using this assistant carries risks, including account penalties, bans, game errors or data loss. This project is not affiliated with the game publisher and does not guarantee safe use. Review and follow the game rules; you are responsible for the risks and consequences of using this tool.
+> **Free & open source:** Official releases are provided free by GitHub **MadestSamurai** · Bilibili **MadSamurai**. [Official downloads](https://github.com/MadestSamurai/bd2-equipment-assistant/releases) · [Source and risk notice](DISTRIBUTION.md#english). Third-party fees do not imply the author’s involvement, endorsement or support.
+>
+> **Risk notice:** This is an unofficial community tool. Use may result in account penalties, bans, game errors or data loss. Follow the game rules and accept responsibility for the risks of use. The MIT license remains unchanged.
 
 English · [简体中文](README.md)
 
@@ -10,7 +12,7 @@ A standalone equipment assistant for BrownDust II on Windows. Plan N-grade gear 
 
 ## Download
 
-Current version: **0.3.2**. One application includes Simplified Chinese and English. Start with a small budget when first using the tool.
+Current version: **0.3.3**. One application includes Simplified Chinese and English. Start with a small budget when first using the tool.
 
 | Edition | Runtime requirement | Recommended for |
 | --- | --- | --- |
@@ -75,7 +77,7 @@ Requires Windows, PowerShell and .NET SDK 10.0.100. From this repository root:
 .\package.ps1 -Locked
 ```
 
-Packages go to `dist/v0.3.2/`. The public source builds independently, without other BD2 repositories or Python.
+Packages go to `dist/v0.3.3/`. The public source builds independently, without other BD2 repositories or Python.
 
 [Development](docs/DEVELOPMENT.md) · [Localization](docs/LOCALIZATION.md) · [Publication style](docs/PUBLICATION_STYLE.md) · [Release notes](docs/RELEASE_NOTES.md)
 

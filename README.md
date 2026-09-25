@@ -1,6 +1,8 @@
 # BD2 Equipment Assistant · 搓粉与精炼助手
 
-> **免责声明：** 使用辅助工具存在账号处罚、封禁、游戏异常或数据损失等风险。本项目与游戏发行方无关，不保证使用安全。请自行了解并遵守游戏规则，使用者须自行承担相关风险与后果。
+> **免费开源：** 作者发布版免费提供，GitHub **MadestSamurai** · B站 **MadSamurai**。[官方下载](https://github.com/MadestSamurai/bd2-equipment-assistant/releases) · [来源与风险说明](DISTRIBUTION.md)。第三方收费不代表作者参与、背书或提供服务。
+>
+> **风险提示：** 本工具与游戏官方无关联。使用可能导致账号处罚、封禁、游戏异常或数据损失，请遵守游戏规则并自行承担使用风险。MIT 许可证保持不变。
 
 简体中文 · [English](README.en.md)
 
@@ -10,7 +12,7 @@
 
 ## 下载
 
-当前版本：**0.3.2**。同一个程序内置简体中文与英语；首次使用建议先以小预算确认游戏结果。
+当前版本：**0.3.3**。同一个程序内置简体中文与英语；首次使用建议先以小预算确认游戏结果。
 
 | 版本 | 运行环境 | 建议 |
 | --- | --- | --- |
@@ -75,7 +77,7 @@
 .\package.ps1 -Locked
 ```
 
-输出目录为 `dist/v0.3.2/`。公开源码可独立构建，不依赖其他 BD2 仓库或 Python。
+输出目录为 `dist/v0.3.3/`。公开源码可独立构建，不依赖其他 BD2 仓库或 Python。
 
 [开发说明](docs/DEVELOPMENT.md) · [翻译维护](docs/LOCALIZATION.md) · [发布格式](docs/PUBLICATION_STYLE.md) · [更新说明](docs/RELEASE_NOTES.md)
 

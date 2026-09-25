@@ -1,4 +1,4 @@
-param([switch]$Locked,[string]$ClientManaged='')
+﻿param([switch]$Locked,[string]$ClientManaged='')
 $ErrorActionPreference='Stop'
 & (Join-Path $PSScriptRoot 'build.ps1') -Locked:$Locked
 $version=([xml](Get-Content (Join-Path $PSScriptRoot 'Directory.Build.props') -Raw)).Project.PropertyGroup.Version
@@ -21,7 +21,7 @@ try{
   if($ClientManaged){$check=Join-Path $work "$flavor-client";Run @('--connection','prepare',('"'+$ClientManaged+'"'),('"'+$check+'"'));if(!(Test-Path -LiteralPath (Join-Path $check 'bridge.json'))){throw 'Client compile missing'};Run @('--connection','taps',('"'+$ClientManaged+'"'),('"'+(Join-Path $PSScriptRoot 'evidence-spec.json')+'"'),('"'+(Join-Path $check 'evidence-config.json')+'"'))}
   $name="BD2EquipmentAssistant-$version-$flavor-win-x64";$bundle=Join-Path $work $name;New-Item -ItemType Directory -Path $bundle|Out-Null
   Copy-Item -LiteralPath $exe -Destination (Join-Path $assets "$name.exe");Copy-Item -LiteralPath $exe -Destination (Join-Path $bundle "$name.exe")
-  foreach($file in @('README.md','README.en.md','LICENSE','THIRD_PARTY_NOTICES.md')){Copy-Item -LiteralPath (Join-Path $PSScriptRoot $file) -Destination $bundle}
+  foreach($file in @('README.md','README.en.md','DISTRIBUTION.md','LICENSE','THIRD_PARTY_NOTICES.md')){Copy-Item -LiteralPath (Join-Path $PSScriptRoot $file) -Destination $bundle}
   foreach($folder in @('docs','licenses')){Copy-Item -LiteralPath (Join-Path $PSScriptRoot $folder) -Destination $bundle -Recurse}
   Compress-Archive -LiteralPath $bundle -DestinationPath (Join-Path $assets "$name.zip") -CompressionLevel Optimal
   $reports+=@{name=$flavor;bytes=$files[0].Length;singleExe=$true;pythonBundled=$false;checks='passed';languages=@('zh-CN','en-US')}
