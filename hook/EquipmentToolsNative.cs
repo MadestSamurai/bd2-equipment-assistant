@@ -8,6 +8,7 @@ namespace BD2Equipment.Live {
   const BindingFlags Flags=BindingFlags.Instance|BindingFlags.Public|BindingFlags.NonPublic;
   static object Get(object o,string n){var t=o.GetType();while(t!=null){var f=t.GetField(n,Flags);if(f!=null)return f.GetValue(o);var p=t.GetProperty(n,Flags);if(p!=null)return p.GetValue(o,null);t=t.BaseType;}throw new MissingFieldException(n);}
   static void Require(bool b,string message){if(!b)throw new InvalidOperationException(message);}
+  public static bool Busy(){return UnityEngine.Object.FindObjectsOfType<EquipmentUpgradeUI>().Any(ui=>ui.gameObject.activeInHierarchy&&(bool)Get(ui,"ὢὮὫὪὩὨὥὥὬὪὪ"));}
   public static void Execute(Command c,UIBase ui){
    if(c.Kind=="equipment_refine_batch"){
     var upgrade=(EquipmentUpgradeUI)ui;

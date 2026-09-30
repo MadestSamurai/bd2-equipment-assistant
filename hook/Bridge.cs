@@ -18,7 +18,7 @@ namespace BD2Equipment.Live {
   private static readonly string root=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"BD2EquipmentAssistant");
   private static readonly string live=Path.Combine(root,"live");
   private static readonly string instance=Guid.NewGuid().ToString("N");
-  private static bool installed,busy;private static long next,sequence,start;private static int pid;
+  private static bool installed,busy,retiring,resolver;private static BD2.LocalIpc.Handoff handoff;private static BD2.LocalIpc.MainThread pump;private static long next,sequence,start;private static int pid;
   private static int lastFrame=-1,renderFrames,slowFrames;private static double maxFrameMs;
   private static long profileAt;private static int profileCount;private static double observeMs,evidenceMs,writeMs,maxMs;
   internal static bool LegacyObservation;
@@ -39,11 +39,21 @@ namespace BD2Equipment.Live {
    [DataMember]public bool Legacy,Focused;[DataMember]public string[] Reads;
   }
   [DataContract] private sealed class Lease {[DataMember]public long ExpiresUtcTicks;[DataMember]public string Owner;}
-  public static void Load(){AppDomain.CurrentDomain.AssemblyResolve+=Resolve;Start();}
+  public static void Load(){
+   if(!resolver){AppDomain.CurrentDomain.AssemblyResolve+=Resolve;resolver=true;}
+   if(handoff==null)handoff=new BD2.LocalIpc.Handoff(typeof(Bridge).Assembly.FullName,"equipment","equipment",false,()=>Start(),Pause,HandoffBusy,Stop,Status);
+   if(!handoff.IsActive&&!handoff.Pending)BD2.LocalIpc.RuntimeFiles.Start(live,BD2.LocalIpc.Build.Fingerprint,LiveProtocol.LiveEntries);
+   handoff.Request(DateTime.UtcNow);if(pump==null)pump=new BD2.LocalIpc.MainThread(()=>{BD2.LocalIpc.LegacyPilots.Discover();handoff.Tick(DateTime.UtcNow);return handoff.Pending;},handoff.Fail);pump.Schedule();
+  }
+  static void Status(string state,string error){if(state=="active"&&handoff!=null&&handoff.IsActive)BD2.LocalIpc.RuntimeFiles.Activate();Write(Path.Combine(live,"runtime.json"),new ComponentStatus{State=state,Error=error,AtUtcTicks=DateTime.UtcNow.Ticks});}
+  [DataContract] sealed class ComponentStatus{[DataMember]public string State,Error;[DataMember]public long AtUtcTicks;}
+  static void Pause(){retiring=true;BD2.LocalIpc.RuntimeFiles.Revoke();}
+  static string HandoffBusy(){if(busy||pending!=null)return "command observation";if(Evidence.Waiting)return "equipment request awaiting response";if(EquipmentToolsNative.Busy())return "native batch refinement";return "";}
+  public static void Unload(){BD2.LocalIpc.MainThread.Drain(()=>{if(handoff!=null)handoff.Unload();},Status);}
   private static Assembly Resolve(object sender,ResolveEventArgs args){if(new AssemblyName(args.Name).Name!="0Harmony")return null;var old=AppDomain.CurrentDomain.GetAssemblies().FirstOrDefault(a=>a.GetName().Name=="0Harmony");if(old!=null)return old;using(var s=typeof(Bridge).Assembly.GetManifestResourceStream("Equipment.Harmony.dll"))using(var b=new MemoryStream()){s.CopyTo(b);return Assembly.Load(b.ToArray());}}
   [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
   private static void Start(){lock(typeof(Bridge)){
-   if(installed)return;
+   if(installed)return;retiring=false;BD2.LocalIpc.RuntimeFiles.Start(live,BD2.LocalIpc.Build.Fingerprint,LiveProtocol.LiveEntries);
    if(typeof(UIBase).Assembly.ManifestModule.ModuleVersionId.ToString()!=ClientNames.Mvid)throw new InvalidOperationException("Client changed after compilation; reconnect.");
    Directory.CreateDirectory(live);Directory.CreateDirectory(Path.Combine(live,"receipts"));Directory.CreateDirectory(Path.Combine(live,"claimed"));
    using(var p=Process.GetCurrentProcess()){pid=p.Id;start=p.StartTime.ToUniversalTime().Ticks;}
@@ -52,12 +62,13 @@ namespace BD2Equipment.Live {
    UnityEngine.Canvas.willRenderCanvases+=Tick;installed=true;Evidence.Start(live);
    Write(Path.Combine(live,"attached.json"),new Frame{ProcessId=pid,ProcessStartTicks=start,Instance=instance,AtUtcTicks=DateTime.UtcNow.Ticks});
   }}
-  public static void Unload(){Evidence.Stop();UnityEngine.Canvas.willRenderCanvases-=Tick;installed=false;uis.Clear();targets.Clear();}
+  private static void Stop(){if(resolver){AppDomain.CurrentDomain.AssemblyResolve-=Resolve;resolver=false;}Evidence.Stop();UnityEngine.Canvas.willRenderCanvases-=Tick;installed=false;uis.Clear();targets.Clear();}
   private static T Read<T>(string file)where T:class{
-   try{using(var f=new FileStream(file,FileMode.Open,FileAccess.Read,FileShare.Read|FileShare.Delete))return(T)new DataContractJsonSerializer(typeof(T)).ReadObject(f);}
+   try{var bytes=BD2.LocalIpc.RuntimeFiles.Read(file);if(BD2.LocalIpc.RuntimeFiles.Handles(file)){if(bytes==null)return null;using(var memory=new MemoryStream(bytes))return(T)new DataContractJsonSerializer(typeof(T)).ReadObject(memory);}using(var f=new FileStream(file,FileMode.Open,FileAccess.Read,FileShare.Read|FileShare.Delete))return(T)new DataContractJsonSerializer(typeof(T)).ReadObject(f);}
    catch(FileNotFoundException){return null;}catch(DirectoryNotFoundException){return null;}
   }
   private static void Write(string file,object data,bool durable=true){
+   using(var memory=new MemoryStream()){new DataContractJsonSerializer(data.GetType()).WriteObject(memory,data);if(BD2.LocalIpc.RuntimeFiles.Write(file,memory.ToArray()))return;}
    var tmp=file+"."+Guid.NewGuid().ToString("N")+".tmp";
    try{using(var f=new FileStream(tmp,FileMode.CreateNew,FileAccess.Write,FileShare.None)){new DataContractJsonSerializer(data.GetType()).WriteObject(f,data);f.Flush(durable);}
     if(File.Exists(file))File.Replace(tmp,file,null);else File.Move(tmp,file);
@@ -121,17 +132,12 @@ namespace BD2Equipment.Live {
   private static void Save(Receipt r){r.AtUtcTicks=DateTime.UtcNow.Ticks;Write(Path.Combine(live,"receipts",r.Command.Id+".json"),r);}
   private static readonly PropertyInfo IdentityProperty=typeof(UIBase).Assembly.GetTypes().SelectMany(t=>t.GetProperties(BindingFlags.Static|BindingFlags.Public|BindingFlags.NonPublic)).Single(p=>p.PropertyType==typeof(Proto.Net.UserDBInfo)&&p.GetIndexParameters().Length==0);
   private static string Hash(string value){using(var sha=SHA256.Create())return BitConverter.ToString(sha.ComputeHash(Encoding.UTF8.GetBytes(value))).Replace("-","").ToLowerInvariant();}
-  private static bool OtherOwner(){
-   string daily=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"BD2DailyAssistant");
-   var lease=Read<Lease>(Path.Combine(daily,"lease.json"));
-   return lease!=null&&lease.ExpiresUtcTicks>DateTime.UtcNow.Ticks || File.Exists(Path.Combine(daily,"live","command.json"));
-  }
   private static void Tick(){
    if(!installed)return;
    if(UnityEngine.Time.frameCount!=lastFrame){lastFrame=UnityEngine.Time.frameCount;renderFrames++;var ms=UnityEngine.Time.unscaledDeltaTime*1000;maxFrameMs=Math.Max(maxFrameMs,ms);if(ms>50)slowFrames++;}
-   if(busy||DateTime.UtcNow.Ticks<next)return;busy=true;next=DateTime.UtcNow.AddMilliseconds(File.Exists(Path.Combine(live,"pause"))&&!LegacyObservation?1000:500).Ticks;
+   if(busy||DateTime.UtcNow.Ticks<next)return;busy=true;next=DateTime.UtcNow.AddMilliseconds((BD2.LocalIpc.RuntimeFiles.Read(Path.Combine(live,"pause"))!=null)&&!LegacyObservation?1000:500).Ticks;
    try{
-    LegacyObservation=File.Exists(Path.Combine(live,"legacy-observation"));var timer=Stopwatch.StartNew();frame=Observe();
+    LegacyObservation=(BD2.LocalIpc.RuntimeFiles.Read(Path.Combine(live,"legacy-observation"))!=null);var timer=Stopwatch.StartNew();frame=Observe();
     var observed=timer.Elapsed.TotalMilliseconds;
     Evidence.Tick(frame);var evidenced=timer.Elapsed.TotalMilliseconds;
     Write(Path.Combine(live,"snapshot.json"),frame,false);var total=timer.Elapsed.TotalMilliseconds;
@@ -141,13 +147,13 @@ namespace BD2Equipment.Live {
      profileAt=DateTime.UtcNow.AddSeconds(10).Ticks;profileCount=0;renderFrames=slowFrames=0;maxFrameMs=0;observeMs=evidenceMs=writeMs=maxMs=0;
     }
     if(pending!=null){pending.After=frame;pending.State="observed_after_dispatch";Save(pending);pending=null;}
-    var path=Path.Combine(live,"command.json");var c=Read<Command>(path);if(c==null)return;
+    if(retiring)return;
+    var path=Path.Combine(live,"command.json");var bytes=BD2.LocalIpc.RuntimeFiles.Take(path);if(bytes==null)return;
+    Command c;using(var memory=new MemoryStream(bytes))c=(Command)new DataContractJsonSerializer(typeof(Command)).ReadObject(memory);if(c==null)return;
     Guid id;if(c.Id==null||c.Id.Length!=32||!Guid.TryParseExact(c.Id,"N",out id))throw new InvalidDataException("Invalid command ID");
-    var claim=Path.Combine(live,"claimed",c.Id+".json");
-    if(File.Exists(claim)) {File.Move(path,Path.Combine(live,"claimed","duplicate-"+Guid.NewGuid().ToString("N")+".json"));return;}
-    File.Move(path,claim); // An ambiguous dispatch is never automatically retried.
+    if(!BD2.LocalIpc.RuntimeFiles.TryClaim(c.Id,c.ExpiresUtcTicks))return;
     var r=new Receipt{Command=c,Before=frame};Save(r);
-    var reason=File.Exists(Path.Combine(live,"pause"))?"paused":LivePolicy.Gate(c,frame,DateTime.UtcNow.Ticks,OtherOwner());
+    var reason=(BD2.LocalIpc.RuntimeFiles.Read(Path.Combine(live,"pause"))!=null)?"paused":LivePolicy.Gate(c,frame,DateTime.UtcNow.Ticks,false);
     if(reason.Length>0){r.State="rejected";r.Error=reason;Save(r);return;}
     r.MayHaveDispatched=true;r.State="dispatching";Save(r);
     try{

@@ -24,10 +24,10 @@ public static class J
  static string Quote(string value){var b=new StringBuilder("\"");foreach(char c in value)b.Append(c switch {'"'=>"\\\"",'\\'=>"\\\\",'\b'=>"\\b",'\f'=>"\\f",'\n'=>"\\n",'\r'=>"\\r",'\t'=>"\\t",_ when c<32=>"\\u"+((int)c).ToString("x4"),_=>c.ToString()});return b.Append('"').ToString();}
  public static string Hash(JsonNode n)=>Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(Canonical(n)))).ToLowerInvariant();
  public static bool Equal(JsonNode? a,JsonNode? b)=>Canonical(a)==Canonical(b);
- public static JsonObject Read(string path){
+ public static JsonObject Read(string path){if(BD2.LocalIpc.DesktopFiles.Read(path,out var bytes))return bytes==null?new JsonObject():JsonNode.Parse(bytes)!.AsObject();
   for(int i=0;;i++)try{using var file=new FileStream(path,FileMode.Open,FileAccess.Read,FileShare.ReadWrite|FileShare.Delete);return JsonNode.Parse(file)!.AsObject();}catch(IOException)when(i<4){Thread.Sleep(50);}
  }
- public static void Write(string path,JsonNode value){Directory.CreateDirectory(Path.GetDirectoryName(path)!);string temp=path+"."+Guid.NewGuid().ToString("N")+".tmp";try{using(var file=new FileStream(temp,FileMode.CreateNew,FileAccess.Write,FileShare.None)){var data=Encoding.UTF8.GetBytes(Canonical(value));file.Write(data);file.Flush(true);}File.Move(temp,path,true);}finally{if(File.Exists(temp))File.Delete(temp);}}
+ public static void Write(string path,JsonNode value){if(BD2.LocalIpc.DesktopFiles.Write(path,Encoding.UTF8.GetBytes(Canonical(value)),Path.GetFileName(path)=="command.json"))return;Directory.CreateDirectory(Path.GetDirectoryName(path)!);string temp=path+"."+Guid.NewGuid().ToString("N")+".tmp";try{using(var file=new FileStream(temp,FileMode.CreateNew,FileAccess.Write,FileShare.None)){var data=Encoding.UTF8.GetBytes(Canonical(value));file.Write(data);file.Flush(true);}File.Move(temp,path,true);}finally{if(File.Exists(temp))File.Delete(temp);}}
  public static string ResourceText(string name){using var stream=typeof(J).Assembly.GetManifestResourceStream("Equipment."+name)??throw new InvalidOperationException("缺少内置数据："+name);using var reader=new StreamReader(stream,Encoding.UTF8);return reader.ReadToEnd();}
  public static JsonObject Resource(string name)=>JsonNode.Parse(ResourceText(name))!.AsObject();
  public static string Data=>Environment.GetEnvironmentVariable("BD2_EQUIPMENT_DATA_ROOT")??Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"BD2EquipmentAssistant");

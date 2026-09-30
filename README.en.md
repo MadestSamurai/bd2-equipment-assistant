@@ -12,7 +12,7 @@ A standalone equipment assistant for BrownDust II on Windows. Plan N-grade gear 
 
 ## Download
 
-Current version: **0.3.3**. One application includes Simplified Chinese and English. Start with a small budget when first using the tool.
+Source version: **0.3.5**. One application includes Simplified Chinese and English. Start with a small budget when first using the tool.
 
 | Edition | Runtime requirement | Recommended for |
 | --- | --- | --- |
@@ -77,10 +77,14 @@ Requires Windows, PowerShell and .NET SDK 10.0.100. From this repository root:
 .\package.ps1 -Locked
 ```
 
-Packages go to `dist/v0.3.3/`. The public source builds independently, without other BD2 repositories or Python.
+Packages go to `dist/v0.3.5/`. The public source builds independently, without other BD2 repositories or Python.
 
 [Development](docs/DEVELOPMENT.md) · [Localization](docs/LOCALIZATION.md) · [Publication style](docs/PUBLICATION_STYLE.md) · [Release notes](docs/RELEASE_NOTES.md)
 
 ## License
 
 Project code is licensed under [MIT](LICENSE). See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) and `licenses/` for dependencies. Game content belongs to its respective rights holders.
+
+## Connection and tool switching
+
+When upgrading from an older release for the first time, close the old tools and restart the game once. These updated tools can then update and switch within the same game process: pending game operations finish before control changes. Settings and records are retained. Live communication uses local named pipes. Modules used by the daily workflow are coordinated separately by its scheduler.

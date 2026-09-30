@@ -54,7 +54,10 @@
         }
       },
       "bd2equipment.core": {
-        "type": "Project"
+        "type": "Project",
+        "dependencies": {
+          "BD2Equipment.Connection": "[0.3.3, )"
+        }
       }
     }
   }

@@ -5,6 +5,7 @@ using System.Runtime.Serialization;
 namespace BD2Equipment.Live {
  public static class LiveProtocol {
   public const int BridgeVersion=64;
+  public const string LiveEntries="runtime.json|snapshot.json|error.json|attached.json|performance.json|control.json|command.json|pause|legacy-observation|evidence-config.json|observation-request.json|evidence.json|catalog-request.json|catalog.json|catalog-part.json|events.json|receipts~*";
   public static bool Ready(Frame f,int processId,long startTicks,long now,string previousInstance=null){
    return f!=null&&f.Protocol==1&&f.BridgeVersion==BridgeVersion&&f.ProcessId==processId&&f.ProcessStartTicks==startTicks&&f.AtUtcTicks>now-TimeSpan.FromSeconds(3).Ticks&&f.AtUtcTicks<=now+TimeSpan.FromSeconds(2).Ticks&&!string.IsNullOrEmpty(f.Instance)&&string.IsNullOrEmpty(f.Error)&&(previousInstance==null||f.Instance!=previousInstance);
   }

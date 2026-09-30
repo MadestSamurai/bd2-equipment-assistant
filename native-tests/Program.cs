@@ -2,6 +2,7 @@ using System.Text;
 using System.Text.Json.Nodes;
 using BD2Equipment.Core;
 using static BD2Equipment.Core.J;
+CatalogProjectionChecks.Run();CatalogTransferChecks.Run();
 Console.OutputEncoding=new UTF8Encoding(false);
 bool regression=args.Length==0;JsonArray? cases=null;if(regression){using var stream=typeof(FakeGame).Assembly.GetManifestResourceStream("Tests.Cases.json")!;cases=JsonNode.Parse(stream)!.AsArray();Environment.SetEnvironmentVariable("BD2_EQUIPMENT_DATA_ROOT",Path.Combine(AppContext.BaseDirectory,"test-data",Guid.NewGuid().ToString("N")));Console.WriteLine(BD2Equipment.Live.PolicyChecks.Run());}
 string testData=Data;int testIndex=0;var failures=new List<string>();

@@ -61,7 +61,11 @@ namespace BD2Equipment.Live {
   internal static string[] Costs=new string[0];
   private static readonly Dictionary<Type,DataContractJsonSerializer> serializers=new Dictionary<Type,DataContractJsonSerializer>();
   private static DataContractJsonSerializer Serializer(Type type){DataContractJsonSerializer s;if(!serializers.TryGetValue(type,out s))serializers[type]=s=new DataContractJsonSerializer(type);return s;}
-  private static ObservationRequest Request(){try{using(var f=new FileStream(Path.Combine(root,"observation-request.json"),FileMode.Open,FileAccess.Read,FileShare.Read|FileShare.Write|FileShare.Delete))return (ObservationRequest)new DataContractJsonSerializer(typeof(ObservationRequest)).ReadObject(f);}catch(FileNotFoundException){return null;}}
+  private static ObservationRequest Request(){var bytes=BD2.LocalIpc.RuntimeFiles.Read(Path.Combine(root,"observation-request.json"));if(bytes==null)return null;using(var memory=new MemoryStream(bytes))return(ObservationRequest)new DataContractJsonSerializer(typeof(ObservationRequest)).ReadObject(memory);}
+  private static readonly Dictionary<string,int> inFlight=new Dictionary<string,int>();
+  internal static bool Waiting{get{lock(queue)return inFlight.Values.Any(v=>v>0);}}
+  [DataContract] private sealed class EventBatch{[DataMember]public EvidenceEvent[] Events;}
+  private static readonly Queue<EvidenceEvent> recent=new Queue<EvidenceEvent>();
 
   private static string root,last="",error="";private static long seq;
   private static Frame frame;private static Harmony harmony;private static EvidenceConfig config;
@@ -107,7 +111,7 @@ namespace BD2Equipment.Live {
    }
    return result.ToArray();
   }
-  private static void Write(string file,object value,bool durable=true){var tmp=file+"."+Guid.NewGuid().ToString("N")+".tmp";try{using(var f=File.Create(tmp)){new DataContractJsonSerializer(value.GetType()).WriteObject(f,value);f.Flush(durable);}if(File.Exists(file))File.Replace(tmp,file,null);else File.Move(tmp,file);}finally{if(File.Exists(tmp))File.Delete(tmp);}}
+  private static void Write(string file,object value,bool durable=true){using(var memory=new MemoryStream()){new DataContractJsonSerializer(value.GetType()).WriteObject(memory,value);if(BD2.LocalIpc.RuntimeFiles.Write(file,memory.ToArray()))return;}var tmp=file+"."+Guid.NewGuid().ToString("N")+".tmp";try{using(var f=File.Create(tmp)){new DataContractJsonSerializer(value.GetType()).WriteObject(f,value);f.Flush(durable);}if(File.Exists(file))File.Replace(tmp,file,null);else File.Move(tmp,file);}finally{if(File.Exists(tmp))File.Delete(tmp);}}
   private static void Configure(string text){
    EvidenceConfig next;using(var ms=new MemoryStream(Encoding.UTF8.GetBytes(text)))next=(EvidenceConfig)new DataContractJsonSerializer(typeof(EvidenceConfig)).ReadObject(ms);
    var game=typeof(UIBase).Assembly;if(next.Mvid!=game.ManifestModule.ModuleVersionId.ToString())throw new InvalidOperationException("Evidence client MVID mismatch");
@@ -133,21 +137,21 @@ namespace BD2Equipment.Live {
   }
   private static void Before(MethodBase __originalMethod){
    try{TapRule rule;if(!requests.TryGetValue(__originalMethod,out rule))return;
-    lock(queue)queue.Enqueue(new EvidenceEvent{AtUtcTicks=DateTime.UtcNow.Ticks,Role=rule.Role,Kind="request",Frame=frame,Sequence=++seq});
+    lock(queue){int n;inFlight.TryGetValue(rule.Role,out n);inFlight[rule.Role]=n+1;queue.Enqueue(new EvidenceEvent{AtUtcTicks=DateTime.UtcNow.Ticks,Role=rule.Role,Kind="request",Frame=frame,Sequence=++seq});}
    }catch{}
   }
   private static void After(MethodBase __originalMethod,byte[] __0,int __2,bool __result){
    try{TapRule rule;if(!responses.TryGetValue(__originalMethod,out rule))return;
     var e=new EvidenceEvent{AtUtcTicks=DateTime.UtcNow.Ticks,Role=rule.Role,Kind="response",Frame=frame,ErrorCode=__2,Accepted=__result,Sequence=++seq};
     try{if(__0!=null){var type=typeof(UIBase).Assembly.GetType(rule.ResponseType,true);var parser=type.GetProperty("Parser").GetValue(null,null);var parse=parser.GetType().GetMethod("ParseFrom",new[]{typeof(byte[])});e.Values=Values(parse.Invoke(parser,new object[]{__0}),rule.Paths);}}catch(Exception ex){e.Error=ex.GetBaseException().Message;}
-    lock(queue)queue.Enqueue(e);
+    lock(queue){int n;inFlight.TryGetValue(rule.Role,out n);inFlight[rule.Role]=Math.Max(0,n-1);queue.Enqueue(e);}
    }catch{}
   }
   internal static void Tick(Frame current){
    frame=current;
    try{
     NativeCatalog.Tick(root,current);
-    var path=Path.Combine(root,"evidence-config.json");if(File.Exists(path)){string text;using(var f=new FileStream(path,FileMode.Open,FileAccess.Read,FileShare.Read|FileShare.Delete))using(var reader=new StreamReader(f))text=reader.ReadToEnd();if(text!=last)Configure(text);}
+    var bytes=BD2.LocalIpc.RuntimeFiles.Read(Path.Combine(root,"evidence-config.json"));if(bytes!=null){string text=Encoding.UTF8.GetString(bytes);if(text!=last&&!Waiting)Configure(text);}
     var state=new EvidenceState{AtUtcTicks=DateTime.UtcNow.Ticks,Frame=current,Config=Convert.ToBase64String(System.Security.Cryptography.SHA256.Create().ComputeHash(Encoding.UTF8.GetBytes(last)))};
     var request=Request();state.ObservationRequest=request==null?"":request.Id;var costs=new List<string>();
     if(config!=null){
@@ -163,7 +167,8 @@ namespace BD2Equipment.Live {
      }
      state.Readings=readings.ToArray();
     }
-    while(true){EvidenceEvent item;lock(queue){if(queue.Count==0)break;item=queue.Peek();}Write(Path.Combine(root,"events",item.AtUtcTicks+"-"+item.Sequence+".json"),item);lock(queue){queue.Dequeue();}}
+    bool changed=false;while(true){EvidenceEvent item;lock(queue){if(queue.Count==0)break;item=queue.Dequeue();}recent.Enqueue(item);while(recent.Count>128)recent.Dequeue();changed=true;}
+    if(changed)Write(Path.Combine(root,"events.json"),new EventBatch{Events=recent.ToArray()},false);
     Costs=costs.ToArray();state.Error="";Write(Path.Combine(root,"evidence.json"),state,false);error="";
    }catch(Exception e){error=e.GetBaseException().ToString();Write(Path.Combine(root,"evidence.json"),new EvidenceState{AtUtcTicks=DateTime.UtcNow.Ticks,Frame=current,Error=error});}
   }
