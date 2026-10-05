@@ -62,7 +62,7 @@ namespace BD2Equipment.Live {
    UnityEngine.Canvas.willRenderCanvases+=Tick;installed=true;Evidence.Start(live);
    Write(Path.Combine(live,"attached.json"),new Frame{ProcessId=pid,ProcessStartTicks=start,Instance=instance,AtUtcTicks=DateTime.UtcNow.Ticks});
   }}
-  private static void Stop(){if(resolver){AppDomain.CurrentDomain.AssemblyResolve-=Resolve;resolver=false;}Evidence.Stop();UnityEngine.Canvas.willRenderCanvases-=Tick;installed=false;uis.Clear();targets.Clear();}
+  private static void Stop(){if(resolver){AppDomain.CurrentDomain.AssemblyResolve-=Resolve;resolver=false;}Evidence.Shutdown();UnityEngine.Canvas.willRenderCanvases-=Tick;installed=false;uis.Clear();targets.Clear();}
   private static T Read<T>(string file)where T:class{
    try{var bytes=BD2.LocalIpc.RuntimeFiles.Read(file);if(BD2.LocalIpc.RuntimeFiles.Handles(file)){if(bytes==null)return null;using(var memory=new MemoryStream(bytes))return(T)new DataContractJsonSerializer(typeof(T)).ReadObject(memory);}using(var f=new FileStream(file,FileMode.Open,FileAccess.Read,FileShare.Read|FileShare.Delete))return(T)new DataContractJsonSerializer(typeof(T)).ReadObject(f);}
    catch(FileNotFoundException){return null;}catch(DirectoryNotFoundException){return null;}
@@ -94,6 +94,7 @@ namespace BD2Equipment.Live {
   private static Frame Observe(){
    var f=new Frame{ProcessId=pid,ProcessStartTicks=start,Instance=instance,AtUtcTicks=DateTime.UtcNow.Ticks,Sequence=++sequence,Scene=SceneManager.GetActiveScene().name??""};
    try {
+    if(!Neo.Unity.Neon.NeonSdk.IsInitialized){f.Error="Waiting for login SDK initialization";return f;}
     var member=Neo.Unity.Neon.NeonSdk.Auth==null?null:Neo.Unity.Neon.NeonSdk.Auth.LoggedMember;
     if(member!=null)f.AccountKey=Hash("bd2-member-v1|"+member.MemberId.ToString(System.Globalization.CultureInfo.InvariantCulture));
     var user=(Proto.Net.UserDBInfo)IdentityProperty.GetValue(null,null);
@@ -178,3 +179,4 @@ namespace BD2Equipment.Live {
   }
  }
 }
+

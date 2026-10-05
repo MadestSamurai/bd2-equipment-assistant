@@ -9,6 +9,8 @@ using System.Windows.Media.Imaging;
 namespace BD2Equipment;
 public partial class MainWindow:Window
 {
+ public bool HostedAutomationEnabled => executing || busy;
+
  readonly WorkerClient worker=new();JsonObject? stock,plan,resumeDisplay;bool ready,busy,executing;List<GearRow> gear=[];JsonArray? rawGear;
  static string S(JsonNode? n)=>L.T(n?.GetValue<string>()??"");
  static long N(JsonNode? n)=>n==null?0:long.Parse(n.ToString(),System.Globalization.CultureInfo.InvariantCulture);

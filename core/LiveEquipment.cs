@@ -28,7 +28,7 @@ public sealed class LiveEquipment:IEquipmentGame
   var pipe=BD2Equipment.Live.EquipmentTransport.Connect();string? fingerprint=null;try{fingerprint=pipe.Fingerprint();}catch(IOException){}catch(TimeoutException){}
   JsonObject? frame=null;try{frame=Snapshot();if(!Equal(frame["ProcessId"],location["processId"])||!Equal(frame["ProcessStartTicks"],location["startTicks"]))frame=null;}catch(IOException){}catch(InvalidOperationException){}
   string prepared=Path.Combine(Data,"prepared");Directory.CreateDirectory(prepared);
-  if(frame==null||N(frame["BridgeVersion"])!=64||fingerprint!=BD2Equipment.Live.LiveEntry.Fingerprint){invoke(["prepare",managed,prepared]);invoke([frame==null?"attach":"upgrade",Path.Combine(prepared,"bridge.dll")]);}
+  bool hosted=BD2.LocalIpc.HostedConnection.TryOpen(pipe,checked((int)N(location["processId"])),N(location["startTicks"]));if(!hosted&&(frame==null||N(frame["BridgeVersion"])!=64||fingerprint!=BD2Equipment.Live.LiveEntry.Fingerprint)){invoke(["prepare",managed,prepared]);invoke([frame==null?"attach":"upgrade",Path.Combine(prepared,"bridge.dll")]);}
   pipe.Open(BD2Equipment.Live.LiveEntry.Fingerprint);
   string spec=Path.Combine(prepared,"evidence-spec.json");Write(spec,Resource("evidence-spec.json"));invoke(["taps",managed,spec,Path.Combine(Data,"evidence-config.json")]);Snapshot();
  }

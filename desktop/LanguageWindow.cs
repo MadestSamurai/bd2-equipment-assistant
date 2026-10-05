@@ -3,7 +3,7 @@ using System.Windows.Controls;
 namespace BD2Equipment;
 public partial class MainWindow {
  void LanguageChanged(object sender,SelectionChangedEventArgs e){
-  if(!ready||busy)return;string previous=L.Language;string next=LanguageBox.SelectedIndex==1?"en-US":"zh-CN";if(previous==next)return;
+  if(!ready||busy)return;string previous=L.Language;string next=AppDomain.CurrentDomain.GetData("BD2Daily.HostedLanguage") as string ?? (LanguageBox.SelectedIndex==1?"en-US":"zh-CN");if(previous==next)return;
   var boxes=new[]{SlotFilter,KindFilter,RarityFilter,QualityFilter,OwnerFilter,ExclusiveFilter,WornFilter,LockFilter,KeepFilter,LevelFilter,MainStatFilter,SubStatFilter};var selections=boxes.Select(Pick).ToArray();
   int sort=SortFilter.SelectedIndex,sub=SubCountFilter.SelectedIndex;var min=ScoreMinFilter.SelectedItem;var max=ScoreMaxFilter.SelectedItem;
   ready=false;L.Select(next);InitializeFilters();if(stock!=null)LoadStock(stock,rawGear);
