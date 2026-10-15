@@ -1,3 +1,10 @@
+> [!IMPORTANT]
+> **This repository is no longer maintained. Code and future updates have moved to [Dustweave](https://github.com/MadestSamurai/Dustweave).**
+>
+> Use **Tools → Equipment Assistant** in Dustweave for powder crafting and batch refinement. [View current code](https://github.com/MadestSamurai/Dustweave/tree/main/standalone/bd2-equipment-assistant) · [Download Dustweave](https://github.com/MadestSamurai/Dustweave/releases/latest)
+>
+> Fixes, game compatibility updates and new features will be maintained only in Dustweave, without maintaining both repositories in parallel. This repository and the original documentation below remain available for historical reference.
+
 # BD2 Equipment Assistant
 
 > **Free & open source:** Official releases are provided free by GitHub **MadestSamurai** · Bilibili **MadSamurai**. [Official downloads](https://github.com/MadestSamurai/bd2-equipment-assistant/releases) · [Source and risk notice](DISTRIBUTION.md#english). Third-party fees do not imply the author’s involvement, endorsement or support.

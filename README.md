@@ -1,3 +1,10 @@
+> [!IMPORTANT]
+> **本仓库已停止维护，代码与后续更新已迁移至 [Dustweave · 织尘](https://github.com/MadestSamurai/Dustweave)。**
+>
+> 请使用 Dustweave「工具」中的「装备助手」进行搓粉与批量精炼。[查看当前代码](https://github.com/MadestSamurai/Dustweave/tree/main/standalone/bd2-equipment-assistant) · [下载 Dustweave](https://github.com/MadestSamurai/Dustweave/releases/latest)
+>
+> 后续修复、游戏版本适配和功能更新仅在 Dustweave 仓库维护，不再同步维护两边。本仓库及下方原有说明保留供历史参考。
+
 # BD2 Equipment Assistant · 搓粉与精炼助手
 
 > **免费开源：** 作者发布版免费提供，GitHub **MadestSamurai** · B站 **MadSamurai**。[官方下载](https://github.com/MadestSamurai/bd2-equipment-assistant/releases) · [来源与风险说明](DISTRIBUTION.md)。第三方收费不代表作者参与、背书或提供服务。
